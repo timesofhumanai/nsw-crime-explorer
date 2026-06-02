@@ -394,6 +394,27 @@ function donutPanel(){
 }
 
 initData().then(function(){ buildControls(); setMeta(); draw(); });
+
+// --- Auto-height: tell the parent page how tall we are, so it can size the iframe
+// and avoid an inner scrollbar. Safe no-op when not embedded.
+(function(){
+  function postHeight(){
+    try{
+      var h=document.documentElement.scrollHeight;
+      if(window.parent && window.parent!==window){
+        window.parent.postMessage({nceHeight:h}, '*');
+      }
+    }catch(e){}
+  }
+  // Report on load, on resize, and whenever the dashboard re-renders.
+  window.addEventListener('load', postHeight);
+  window.addEventListener('resize', postHeight);
+  // Re-measure after any click/interaction settles (mode switch, suburb select, group collapse).
+  document.addEventListener('click', function(){ setTimeout(postHeight, 120); });
+  // Catch async content (suburb fetches) by polling briefly after interactions and periodically.
+  setInterval(postHeight, 1000);
+  postHeight();
+})();
 </script>
 </body>
 </html>
