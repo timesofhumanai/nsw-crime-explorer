@@ -395,25 +395,31 @@ function donutPanel(){
 
 initData().then(function(){ buildControls(); setMeta(); draw(); });
 
-// --- Auto-height: tell the parent page how tall we are, so it can size the iframe
-// and avoid an inner scrollbar. Safe no-op when not embedded.
+// --- Auto-height: report our content height to the parent so it can size the iframe.
+// Measures a stable inner-content height and only posts when it actually changes,
+// which prevents resize feedback loops. Safe no-op when not embedded.
 (function(){
-  function postHeight(){
-    try{
-      var h=document.documentElement.scrollHeight;
-      if(window.parent && window.parent!==window){
-        window.parent.postMessage({nceHeight:h}, '*');
-      }
-    }catch(e){}
+  if(!(window.parent && window.parent!==window)) return;
+  var last=0;
+  function measure(){
+    // Use the wrapper's bottom edge, not document.scrollHeight, so iframe resizes
+    // by the parent don't feed back into our own measurement.
+    var wrap=document.querySelector('.wrap');
+    var h=wrap ? Math.ceil(wrap.getBoundingClientRect().bottom + 24) : document.body.scrollHeight;
+    return h;
   }
-  // Report on load, on resize, and whenever the dashboard re-renders.
-  window.addEventListener('load', postHeight);
-  window.addEventListener('resize', postHeight);
-  // Re-measure after any click/interaction settles (mode switch, suburb select, group collapse).
-  document.addEventListener('click', function(){ setTimeout(postHeight, 120); });
-  // Catch async content (suburb fetches) by polling briefly after interactions and periodically.
-  setInterval(postHeight, 1000);
-  postHeight();
+  function report(){
+    var h=measure();
+    if(Math.abs(h-last) > 2){          // ignore sub-pixel jitter
+      last=h;
+      try{ window.parent.postMessage({nceHeight:h}, '*'); }catch(e){}
+    }
+  }
+  window.addEventListener('load', report);
+  window.addEventListener('resize', report);
+  document.addEventListener('click', function(){ setTimeout(report, 150); });
+  setInterval(report, 1500);  // catch async content; only posts on real change
+  report();
 })();
 </script>
 </body>
