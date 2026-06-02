@@ -8,7 +8,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Archivo:wght@400;500;600;700&display=swap');
 
 :root[data-theme="dark"]{
-  --ink:#ece6d8; --paper:#14171f; --paper2:#1d212c; --line:#2d3340;
+  --ink:#ece6d8; --paper:#1B1B1B; --paper2:#262626; --line:#383838;
   --red:#e8674f; --red2:#f0876f; --blue:#46a6ad; --blue2:#5fc2c9; --gold:#e0a93f; --gold2:#f0bf5e;
   --muted:#8a8f9c; --dot:rgba(236,230,216,.04);
 }
@@ -150,7 +150,6 @@ footer a{color:var(--red); text-decoration:none; border-bottom:1px solid var(--l
         <div class="tag">Compare any suburb in New South Wales</div>
       </div>
     </div>
-    <button class="themebtn" id="themeBtn">&#9680; <span id="themeTxt">Light</span></button>
   </div>
 
   <p class="intro">Search and compare recorded crime across NSW suburbs to see how areas differ by offence type and over time. Use it to spot patterns, weigh up areas you're considering, and ask better questions, not to label a suburb "safe" or "unsafe". <b>Bigger suburbs naturally record more incidents</b>, so compare areas of similar size and look at the trend direction, not just a single year's number.<span class="small">Source: <b style="color:var(--ink)">NSW BOCSAR</b> &middot; Release <b id="rel" style="color:var(--ink)">&mdash;</b> &middot; <span id="subcount">&mdash;</span> suburbs covered</span></p>
@@ -204,9 +203,8 @@ const COLORVAR2={a:'red2',b:'blue2',c:'gold2'};
 let NMODE=2, MODE_SPAN=false, TREND_ANNUAL=false, donutTab=0;
 let cur=[null,null,null];
 
-function applyTheme(t){document.documentElement.dataset.theme=t; document.getElementById('themeTxt').textContent=t==='dark'?'Light':'Dark'; try{localStorage.setItem('nce-theme',t)}catch(e){}}
-(function(){let t='dark'; try{t=localStorage.getItem('nce-theme')||'dark'}catch(e){} applyTheme(t)})();
-document.getElementById('themeBtn').onclick=()=>applyTheme(document.documentElement.dataset.theme==='dark'?'light':'dark');
+function applyTheme(t){document.documentElement.dataset.theme=t;}
+applyTheme('dark'); // locked to dark mode
 
 function setMeta(){
   document.getElementById('rel').textContent=META.release;
