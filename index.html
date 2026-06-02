@@ -58,6 +58,8 @@ h1{font-family:'Fraunces',serif; font-weight:600; font-size:clamp(28px,5vw,50px)
 .results div{padding:9px 14px; cursor:pointer; font-size:14px; display:flex; justify-content:space-between; border-bottom:1px solid var(--line)}
 .results div:hover,.results div.hl{background:var(--paper2)}
 .results div .t{color:var(--muted); font-size:12px}
+.results .hintrow{color:var(--muted); font-style:italic; font-size:13px; cursor:default; justify-content:flex-start; background:transparent}
+.results .hintrow:hover{background:transparent}
 
 .toolbar{display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin:18px 0; padding-bottom:14px; border-bottom:1px solid var(--line)}
 .hint{font-size:12px; color:var(--muted); font-style:italic}
@@ -228,8 +230,8 @@ function search(q,selfIdx){
   q=q.toLowerCase().trim();
   const taken=[]; for(let i=0;i<NMODE;i++){if(i!==selfIdx&&cur[i])taken.push(cur[i].name);}
   let pool=INDEX.filter(function(x){return taken.indexOf(x.n)<0});
-  if(!q)return pool.slice(0,8);
-  return pool.filter(function(x){return x.n.toLowerCase().indexOf(q)>=0}).slice(0,12);
+  if(!q)return [];
+  return pool.filter(function(x){return x.n.toLowerCase().indexOf(q)>=0});
 }
 async function loadSuburb(name){
   if(SUBCACHE[name])return SUBCACHE[name];
@@ -249,14 +251,32 @@ function buildControls(){
   const labels=['Suburb A','Suburb B','Suburb C'];
   let h='';
   for(let i=0;i<NMODE;i++){
-    h+='<div class="picker '+SIDES[i]+'"><label>'+labels[i]+'</label><input id="in'+i+'" placeholder="Search&hellip;" autocomplete="off" value="'+(cur[i]?cur[i].name:'')+'"><button class="clearx'+(cur[i]?' show':'')+'" id="clr'+i+'" title="Clear" aria-label="Clear suburb">&times;</button><div class="results" id="res'+i+'"></div></div>';
+    h+='<div class="picker '+SIDES[i]+'"><label>'+labels[i]+'</label><input id="in'+i+'" placeholder="Type a suburb name&hellip;" autocomplete="off" value="'+(cur[i]?cur[i].name:'')+'"><button class="clearx'+(cur[i]?' show':'')+'" id="clr'+i+'" title="Clear" aria-label="Clear suburb">&times;</button><div class="results" id="res'+i+'"></div></div>';
   }
   c.innerHTML=h;
   for(let i=0;i<NMODE;i++)setupPicker(i);
 }
 function setupPicker(i){
   const inEl=document.getElementById('in'+i), resEl=document.getElementById('res'+i), clrEl=document.getElementById('clr'+i); let hl=-1, items=[];
-  function render(){items=search(inEl.value,i); resEl.innerHTML=items.map(function(x,k){return '<div data-n="'+x.n+'" class="'+(k===hl?'hl':'')+'">'+x.n+'<span class="t">'+x.t.toLocaleString()+" in '25</span></div>"}).join(''); resEl.classList.toggle('show',items.length>0);}
+  function render(){
+    const q=inEl.value.trim();
+    const all=search(q,i);
+    items=all.slice(0,10);
+    if(!q){
+      resEl.innerHTML='<div class="hintrow">Start typing to search '+INDEX.length.toLocaleString()+' NSW suburbs</div>';
+      resEl.classList.add('show');
+      return;
+    }
+    if(all.length===0){
+      resEl.innerHTML='<div class="hintrow">No suburbs match &ldquo;'+q.replace(/</g,'&lt;')+'&rdquo;</div>';
+      resEl.classList.add('show');
+      return;
+    }
+    let html=items.map(function(x,k){return '<div data-n="'+x.n+'" class="'+(k===hl?'hl':'')+'">'+x.n+'<span class="t">'+x.t.toLocaleString()+" in '25</span></div>"}).join('');
+    if(all.length>items.length){html+='<div class="hintrow">'+(all.length-items.length)+' more&hellip; keep typing to narrow</div>';}
+    resEl.innerHTML=html;
+    resEl.classList.add('show');
+  }
   inEl.addEventListener('focus',render);
   inEl.addEventListener('input',function(){hl=-1;render()});
   inEl.addEventListener('keydown',function(e){if(e.key==='ArrowDown'){hl=Math.min(hl+1,items.length-1);render();e.preventDefault()}else if(e.key==='ArrowUp'){hl=Math.max(hl-1,0);render();e.preventDefault()}else if(e.key==='Enter'&&hl>=0)pick(items[hl].n);else if(e.key==='Escape')resEl.classList.remove('show')});
