@@ -169,10 +169,10 @@ footer a{color:var(--red); text-decoration:none; border-bottom:1px solid var(--l
 
 <div class="toolbar">
   <div class="seg">
-    <button id="yLatest" class="on">2025</button>
-    <button id="ySpan">vs 2024</button>
+    <button id="yLatest" class="on">Latest year</button>
+    <button id="ySpan">Year on year</button>
   </div>
-  <span class="hint" id="hint">Total recorded incidents for 2025.</span>
+  <span class="hint" id="hint">&nbsp;</span>
 </div>
 
 <div id="view"></div>
@@ -182,7 +182,7 @@ footer a{color:var(--red); text-decoration:none; border-bottom:1px solid var(--l
 </div>
 
 <footer>
-  <p>Data: NSW Bureau of Crime Statistics and Research (BOCSAR), Recorded Criminal Incidents by Suburb, Creative Commons Attribution. Counts cover Jan 1995 to Dec 2025; this tool shows 2010 onward. Rate-per-population view in development. Informational only, not advice.</p>
+  <p>Data: NSW Bureau of Crime Statistics and Research (BOCSAR), Recorded Criminal Incidents by Suburb, Creative Commons Attribution. Counts cover Jan 1995 onward; this tool shows <span id="footyears">recent years</span>. Rate-per-population view in development. Informational only, not advice.</p>
 </footer>
 </div>
 
@@ -193,6 +193,7 @@ const GROUPS = {"Violent": ["Homicide", "Assault", "Sexual offences", "Robbery",
 // Set to 'data' for production (GitHub Pages). Set to null to use the embedded 12-suburb demo only.
 const DATA_BASE = 'data';
 let META = EMBED.meta, YEARS = META.years, CATS = META.categories;
+let LATEST = YEARS[YEARS.length-1], PREV = YEARS[YEARS.length-2];
 const SAMPLE = EMBED.sample;
 let INDEX = Object.entries(SAMPLE).map(([n,d])=>({n,s:d.s,t:d.t})).sort((a,b)=>a.n.localeCompare(b.n));
 let SLUGMAP = {}; INDEX.forEach(x=>SLUGMAP[x.n]=x.s);
@@ -207,7 +208,15 @@ function applyTheme(t){document.documentElement.dataset.theme=t; document.getEle
 (function(){let t='dark'; try{t=localStorage.getItem('nce-theme')||'dark'}catch(e){} applyTheme(t)})();
 document.getElementById('themeBtn').onclick=()=>applyTheme(document.documentElement.dataset.theme==='dark'?'light':'dark');
 
-function setMeta(){document.getElementById('rel').textContent=META.release; document.getElementById('subcount').textContent=INDEX.length.toLocaleString();}
+function setMeta(){
+  document.getElementById('rel').textContent=META.release;
+  document.getElementById('subcount').textContent=INDEX.length.toLocaleString();
+  const yl=document.getElementById('yLatest'), ys=document.getElementById('ySpan');
+  if(yl)yl.textContent=String(LATEST);
+  if(ys)ys.textContent='vs '+PREV;
+  const fy=document.getElementById('footyears'); if(fy)fy.textContent=YEARS[0]+' to '+LATEST;
+  hint();
+}
 setMeta();
 
 // Load the full statewide index from the data server. Falls back silently to the embedded demo.
@@ -218,6 +227,7 @@ async function initData(){
     if(!r.ok) throw new Error('index '+r.status);
     const j=await r.json();
     META=j.meta; YEARS=META.years; CATS=META.categories;
+    LATEST=YEARS[YEARS.length-1]; PREV=YEARS[YEARS.length-2];
     INDEX=j.suburbs.slice().sort((a,b)=>a.n.localeCompare(b.n));
     SLUGMAP={}; INDEX.forEach(x=>SLUGMAP[x.n]=x.s);
     setMeta();
@@ -272,7 +282,7 @@ function setupPicker(i){
       resEl.classList.add('show');
       return;
     }
-    let html=items.map(function(x,k){return '<div data-n="'+x.n+'" class="'+(k===hl?'hl':'')+'">'+x.n+'<span class="t">'+x.t.toLocaleString()+" in '25</span></div>"}).join('');
+    let html=items.map(function(x,k){return '<div data-n="'+x.n+'" class="'+(k===hl?'hl':'')+'">'+x.n+'<span class="t">'+x.t.toLocaleString()+" in '"+String(LATEST).slice(2)+'</span></div>'}).join('');
     if(all.length>items.length){html+='<div class="hintrow">'+(all.length-items.length)+' more&hellip; keep typing to narrow</div>';}
     resEl.innerHTML=html;
     resEl.classList.add('show');
@@ -297,7 +307,7 @@ document.getElementById('modeSeg').addEventListener('click',function(e){
 document.getElementById('yLatest').onclick=function(){MODE_SPAN=false;tog('yLatest','ySpan');hint();draw()};
 document.getElementById('ySpan').onclick=function(){MODE_SPAN=true;tog('ySpan','yLatest');hint();draw()};
 function tog(on,off){document.getElementById(on).classList.add('on');document.getElementById(off).classList.remove('on')}
-function hint(){document.getElementById('hint').textContent=MODE_SPAN?'2025 vs 2024 (change shown).':'Total recorded incidents for 2025.';}
+function hint(){const el=document.getElementById('hint'); if(el)el.textContent=MODE_SPAN?(LATEST+' vs '+PREV+' (change shown).'):('Total recorded incidents for '+LATEST+'.');}
 
 function catTotal(d,cat,year){if(!d||!d.c[cat])return 0; return d.c[cat].a[YEARS.indexOf(year)]||0;}
 function suburbTotal(d,year){if(!d)return 0; return CATS.reduce(function(s,c){return s+catTotal(d,c,year)},0);}
@@ -308,9 +318,9 @@ function draw(){
   const act=active();
   if(act.every(function(x){return !x})){v.innerHTML='<div class="empty">'+(NMODE===1?'Pick a suburb to begin.':'Pick suburbs above to begin comparing.')+'</div>';document.getElementById('note').style.display='none';return}
   document.getElementById('note').style.display='block';
-  const yr=2025,prev=2024;
+  const yr=LATEST,prev=PREV;
   let h='<div class="headline" style="--cols:'+NMODE+'">';
-  for(let i=0;i<NMODE;i++){const d=cur[i];h+='<div class="hcard '+SIDES[i]+'"><div class="nm">'+(d?d.name:'&mdash;')+'</div><div class="big">'+(d?suburbTotal(d,yr).toLocaleString():'&mdash;')+'</div><div class="lbl">incidents &middot; 2025</div></div>';}
+  for(let i=0;i<NMODE;i++){const d=cur[i];h+='<div class="hcard '+SIDES[i]+'"><div class="nm">'+(d?d.name:'&mdash;')+'</div><div class="big">'+(d?suburbTotal(d,yr).toLocaleString():'&mdash;')+'</div><div class="lbl">incidents &middot; '+LATEST+'</div></div>';}
   h+='</div>';
   for(const gname in GROUPS){
     const gcats=GROUPS[gname];
@@ -372,7 +382,7 @@ function donutPanel(){
   if(donutTab>=NMODE||!cur[donutTab]){donutTab=0; for(let i=0;i<NMODE;i++){if(cur[i]){donutTab=i;break}}}
   const d=cur[donutTab];
   if(!d)return '';
-  const totals=CATS.map(function(c){return {c:c,v:catTotal(d,c,2025)}}).filter(function(x){return x.v>0}).sort(function(a,b){return b.v-a.v});
+  const totals=CATS.map(function(c){return {c:c,v:catTotal(d,c,LATEST)}}).filter(function(x){return x.v>0}).sort(function(a,b){return b.v-a.v});
   const top=totals.slice(0,6); const other=totals.slice(6).reduce(function(s,x){return s+x.v},0);
   const slices=top.slice(); if(other>0)slices.push({c:'Other',v:other});
   let sum=slices.reduce(function(s,x){return s+x.v},0); if(!sum)sum=1;
@@ -382,10 +392,10 @@ function donutPanel(){
   for(let i=0;i<NMODE;i++){if(cur[i])tabs+='<button class="'+(i===donutTab?'on '+SIDES[i]:'')+'" onclick="donutTab='+i+';draw()">'+cur[i].name+'</button>';}
   tabs+='</div>';
   let leg='<div class="dlegend">'+slices.map(function(s,i){return '<div><span class="sw" style="background:'+DCOLORS[i]+'"></span><span class="dn">'+s.c+'</span><span class="dv">'+s.v.toLocaleString()+' &middot; '+(s.v/sum*100).toFixed(0)+'%</span></div>'}).join('')+'</div>';
-  return '<div class="panel"><h3>Offence breakdown</h3><div class="cap">Share of recorded incidents by category, 2025.</div>'+tabs+'<div class="donutwrap"><svg viewBox="0 0 200 200" style="width:200px;height:200px">'+paths+'<text x="100" y="96" text-anchor="middle" font-family="Fraunces" font-size="22" font-weight="700" fill="var(--ink)">'+sum.toLocaleString()+'</text><text x="100" y="114" text-anchor="middle" font-family="Archivo" font-size="10" fill="var(--muted)" letter-spacing="1">TOTAL 2025</text></svg>'+leg+'</div></div>';
+  return '<div class="panel"><h3>Offence breakdown</h3><div class="cap">Share of recorded incidents by category, '+LATEST+'.</div>'+tabs+'<div class="donutwrap"><svg viewBox="0 0 200 200" style="width:200px;height:200px">'+paths+'<text x="100" y="96" text-anchor="middle" font-family="Fraunces" font-size="22" font-weight="700" fill="var(--ink)">'+sum.toLocaleString()+'</text><text x="100" y="114" text-anchor="middle" font-family="Archivo" font-size="10" fill="var(--muted)" letter-spacing="1">TOTAL '+LATEST+'</text></svg>'+leg+'</div></div>';
 }
 
-initData().then(function(){ buildControls(); draw(); });
+initData().then(function(){ buildControls(); setMeta(); draw(); });
 </script>
 </body>
 </html>
