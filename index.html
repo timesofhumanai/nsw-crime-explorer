@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en-AU" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NSW Crime Explorer — Compare Suburbs</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Archivo:wght@400;500;600;700&display=swap');
+
+:root[data-theme="dark"]{
+  --ink:#ece6d8; --paper:#14171f; --paper2:#1d212c; --line:#2d3340;
+  --red:#e8674f; --red2:#f0876f; --blue:#46a6ad; --blue2:#5fc2c9; --gold:#e0a93f; --gold2:#f0bf5e;
+  --muted:#8a8f9c; --dot:rgba(236,230,216,.04);
+}
+:root[data-theme="light"]{
+  --ink:#1a1714; --paper:#f4f0e8; --paper2:#ece6d8; --line:#d8cfbc;
+  --red:#b5402e; --red2:#8f3022; --blue:#2c5d63; --blue2:#1f4449; --gold:#c08a2d; --gold2:#a06f1f;
+  --muted:#6f6657; --dot:rgba(26,23,20,.025);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:'Archivo',sans-serif; background:var(--paper); color:var(--ink);
+  line-height:1.5; -webkit-font-smoothing:antialiased; transition:background .3s,color .3s;
+  background-image:radial-gradient(var(--dot) 1px, transparent 1px); background-size:4px 4px;
+}
+.wrap{max-width:1080px; margin:0 auto; padding:0 20px}
+
+header{border-bottom:3px solid var(--ink); padding:24px 0 18px; margin-bottom:8px; position:relative}
+.topbar{display:flex; justify-content:space-between; align-items:flex-start; gap:16px}
+.kicker{font-size:12px; letter-spacing:.22em; text-transform:uppercase; color:var(--red); font-weight:700}
+h1{font-family:'Fraunces',serif; font-weight:600; font-size:clamp(28px,5vw,50px); line-height:1.02; letter-spacing:-.02em; margin:6px 0 8px}
+.sub{font-size:15px; color:var(--muted); max-width:580px}
+.meta-line{font-size:12px; color:var(--muted); margin-top:12px}
+.meta-line b{color:var(--ink); font-weight:600}
+
+.themebtn{flex-shrink:0; border:1.5px solid var(--line); background:var(--paper2); color:var(--ink); font-family:'Archivo'; font-size:12px; font-weight:600; padding:8px 12px; cursor:pointer; display:inline-flex; align-items:center; gap:7px; letter-spacing:.04em}
+.themebtn:hover{border-color:var(--ink)}
+
+.moderow{display:flex; gap:18px; align-items:center; flex-wrap:wrap; margin:22px 0 0}
+.modelabel{font-size:11px; letter-spacing:.18em; text-transform:uppercase; font-weight:700; color:var(--muted)}
+.seg{display:inline-flex; border:1.5px solid var(--ink)}
+.seg button{font-family:'Archivo'; font-size:12px; font-weight:600; letter-spacing:.04em; padding:7px 16px; background:var(--paper); border:none; cursor:pointer; color:var(--ink)}
+.seg button.on{background:var(--ink); color:var(--paper)}
+.seg button:disabled{color:var(--muted); cursor:not-allowed; opacity:.5}
+
+.controls{display:grid; gap:14px; margin:18px 0 8px}
+.controls.n1{grid-template-columns:1fr}
+.controls.n2{grid-template-columns:1fr 1fr}
+.controls.n3{grid-template-columns:1fr 1fr 1fr}
+@media(max-width:680px){.controls.n2,.controls.n3{grid-template-columns:1fr}}
+.picker{background:var(--paper2); border:1.5px solid var(--line); padding:12px 14px; position:relative}
+.picker label{font-size:11px; letter-spacing:.16em; text-transform:uppercase; font-weight:700; display:block; margin-bottom:6px}
+.picker.a label{color:var(--red)} .picker.b label{color:var(--blue)} .picker.c label{color:var(--gold)}
+.picker input{width:100%; border:none; background:transparent; font-family:'Fraunces',serif; font-size:23px; font-weight:600; color:var(--ink); outline:none}
+.picker input::placeholder{color:var(--muted); opacity:.6}
+.results{position:absolute; left:0; right:0; top:100%; background:var(--paper); border:1.5px solid var(--ink); border-top:none; z-index:30; max-height:280px; overflow-y:auto; display:none}
+.results.show{display:block}
+.results div{padding:9px 14px; cursor:pointer; font-size:14px; display:flex; justify-content:space-between; border-bottom:1px solid var(--line)}
+.results div:hover,.results div.hl{background:var(--paper2)}
+.results div .t{color:var(--muted); font-size:12px}
+
+.toolbar{display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin:18px 0; padding-bottom:14px; border-bottom:1px solid var(--line)}
+.hint{font-size:12px; color:var(--muted); font-style:italic}
+
+.headline{display:grid; gap:12px; align-items:end; margin:22px 0; grid-template-columns:repeat(var(--cols,2),1fr)}
+@media(max-width:680px){.headline{grid-template-columns:1fr!important; gap:6px}}
+.hcard .nm{font-family:'Fraunces',serif; font-size:21px; font-weight:600}
+.hcard.a .nm{color:var(--red)} .hcard.b .nm{color:var(--blue)} .hcard.c .nm{color:var(--gold)}
+.hcard .big{font-family:'Fraunces',serif; font-size:clamp(30px,6vw,50px); font-weight:700; line-height:1}
+.hcard .lbl{font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted)}
+
+.grp{margin:18px 0}
+.grphead{display:flex; align-items:center; gap:10px; cursor:pointer; padding:8px 0; border-bottom:2px solid var(--ink)}
+.grphead .gname{font-family:'Fraunces',serif; font-weight:600; font-size:16px}
+.grphead .gtot{margin-left:auto; font-variant-numeric:tabular-nums; font-size:13px; color:var(--muted)}
+.grphead .arr{transition:transform .2s; font-size:11px; color:var(--muted)}
+.grp.collapsed .arr{transform:rotate(-90deg)}
+.grp.collapsed table{display:none}
+table{width:100%; border-collapse:collapse; margin:4px 0 8px}
+td{padding:9px 8px; font-size:14px; border-bottom:1px solid var(--line)}
+td.cat{font-weight:500}
+td.num{text-align:right; font-variant-numeric:tabular-nums; font-weight:600; width:64px}
+td.a{color:var(--red2)} td.b{color:var(--blue2)} td.c{color:var(--gold2)}
+.bar{height:5px; background:var(--paper2); position:relative; border-radius:2px; overflow:hidden; margin-top:3px}
+.bar i{position:absolute; top:0; bottom:0; left:0}
+.bar i.a{background:var(--red)} .bar i.b{background:var(--blue)} .bar i.c{background:var(--gold)}
+.barcell{width:30%}
+.barstack>div{margin:2px 0}
+.flag{font-size:9px; color:var(--gold); font-weight:700; letter-spacing:.05em; text-transform:uppercase; margin-left:6px}
+
+.panel{margin:14px 0 30px}
+.panel h3{font-family:'Fraunces',serif; font-weight:600; font-size:18px; margin-bottom:2px}
+.panel .cap{font-size:12px; color:var(--muted); margin-bottom:14px}
+svg{width:100%; height:auto; display:block; overflow:visible}
+.legend{display:flex; gap:16px; font-size:12px; margin-top:8px; flex-wrap:wrap}
+.legend span{display:inline-flex; align-items:center; gap:6px}
+.legend i{width:14px; height:3px; display:inline-block}
+.legend i.a{background:var(--red)} .legend i.b{background:var(--blue)} .legend i.c{background:var(--gold)}
+
+.tabs{display:inline-flex; gap:2px; margin-bottom:14px; flex-wrap:wrap}
+.tabs button{font-family:'Archivo'; font-size:12px; font-weight:600; padding:6px 14px; background:var(--paper2); border:1.5px solid var(--line); cursor:pointer; color:var(--muted)}
+.tabs button.on{color:var(--paper); border-color:var(--ink)}
+.tabs button.on.a{background:var(--red)} .tabs button.on.b{background:var(--blue)} .tabs button.on.c{background:var(--gold)}
+
+.donutwrap{display:grid; grid-template-columns:auto 1fr; gap:28px; align-items:center}
+@media(max-width:560px){.donutwrap{grid-template-columns:1fr}}
+.dlegend div{display:flex; align-items:center; gap:8px; font-size:13px; padding:3px 0}
+.dlegend .sw{width:12px; height:12px; border-radius:2px; flex-shrink:0}
+.dlegend .dn{flex:1} .dlegend .dv{font-variant-numeric:tabular-nums; color:var(--muted)}
+
+.note{background:var(--paper2); border-left:3px solid var(--gold); padding:14px 18px; font-size:13px; color:var(--muted); margin:0 0 30px}
+.note b{color:var(--ink)}
+footer{border-top:3px solid var(--ink); padding:20px 0 50px; font-size:12px; color:var(--muted)}
+footer a{color:var(--red); text-decoration:none; border-bottom:1px solid var(--line)}
+.empty{text-align:center; padding:60px 20px; color:var(--muted); font-family:'Fraunces',serif; font-style:italic; font-size:18px}
+
+.brand{display:flex; align-items:center; gap:14px}
+.logo{width:54px; height:54px; flex-shrink:0}
+.brandtext .name{font-family:'Fraunces',serif; font-weight:700; font-size:clamp(30px,5.4vw,52px); line-height:.95; letter-spacing:-.02em}
+.brandtext .name .nsw{color:var(--red)} .brandtext .name .ex{color:var(--ink)}
+.brandtext .tag{font-size:12px; letter-spacing:.2em; text-transform:uppercase; color:var(--muted); font-weight:600; margin-top:4px}
+@media(max-width:560px){.logo{width:42px;height:42px}}
+
+.intro{margin:20px 0 4px; font-size:15px; line-height:1.6; color:var(--ink); max-width:760px}
+.intro b{color:var(--red)}
+.intro .small{display:block; font-size:13px; color:var(--muted); margin-top:8px}
+
+.clearx{position:absolute; top:12px; right:12px; width:24px; height:24px; border:1.5px solid var(--line); background:var(--paper); color:var(--muted); cursor:pointer; font-size:14px; line-height:1; border-radius:50%; display:none; align-items:center; justify-content:center; padding:0}
+.clearx:hover{border-color:var(--ink); color:var(--ink)}
+.clearx.show{display:flex}
+.picker input{padding-right:30px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="topbar">
+    <div class="brand">
+      <svg class="logo" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <rect x="2" y="2" width="56" height="56" rx="6" fill="var(--red)"/>
+        <rect x="2" y="2" width="56" height="56" rx="6" stroke="var(--ink)" stroke-width="2.5"/>
+        <circle cx="26" cy="26" r="13" fill="none" stroke="var(--paper)" stroke-width="3.5"/>
+        <line x1="35.5" y1="35.5" x2="46" y2="46" stroke="var(--paper)" stroke-width="4" stroke-linecap="round"/>
+        <rect x="21" y="21" width="10" height="10" rx="1.5" fill="var(--gold)"/>
+      </svg>
+      <div class="brandtext">
+        <div class="name"><span class="nsw">NSW</span> <span class="ex">Crime Explorer</span></div>
+        <div class="tag">Compare any suburb in New South Wales</div>
+      </div>
+    </div>
+    <button class="themebtn" id="themeBtn">&#9680; <span id="themeTxt">Light</span></button>
+  </div>
+
+  <p class="intro">Search and compare recorded crime across NSW suburbs to see how areas differ by offence type and over time. Use it to spot patterns, weigh up areas you're considering, and ask better questions, not to label a suburb "safe" or "unsafe". <b>Bigger suburbs naturally record more incidents</b>, so compare areas of similar size and look at the trend direction, not just a single year's number.<span class="small">Source: <b style="color:var(--ink)">NSW BOCSAR</b> &middot; Release <b id="rel" style="color:var(--ink)">&mdash;</b> &middot; <span id="subcount">&mdash;</span> suburbs covered</span></p>
+
+  <div class="moderow">
+    <span class="modelabel">Compare</span>
+    <div class="seg" id="modeSeg">
+      <button data-n="1">1 suburb</button>
+      <button data-n="2" class="on">2 suburbs</button>
+      <button data-n="3">3 suburbs</button>
+    </div>
+  </div>
+</header>
+
+<div class="controls n2" id="controls"></div>
+
+<div class="toolbar">
+  <div class="seg">
+    <button id="yLatest" class="on">2025</button>
+    <button id="ySpan">vs 2024</button>
+  </div>
+  <span class="hint" id="hint">Total recorded incidents for 2025.</span>
+</div>
+
+<div id="view"></div>
+
+<div class="note" id="note" style="display:none">
+  <b>Reading these numbers.</b> These are incidents <b>recorded by police</b>, not a measure of how dangerous an area is. Larger suburbs record more simply because more people live and pass through them. Small suburbs swing year to year on a handful of events. A population-adjusted rate view is in development; until then, compare suburbs of similar size with care.
+</div>
+
+<footer>
+  <p>Data: NSW Bureau of Crime Statistics and Research (BOCSAR), Recorded Criminal Incidents by Suburb, Creative Commons Attribution. Counts cover Jan 1995 to Dec 2025; this tool shows 2010 onward. Rate-per-population view in development. Informational only, not advice.</p>
+</footer>
+</div>
+
+<script>
+const EMBED = {"meta":{"years":[2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023,2024,2025],"monthly_labels":["Jan 2024","Feb 2024","Mar 2024","Apr 2024","May 2024","Jun 2024","Jul 2024","Aug 2024","Sep 2024","Oct 2024","Nov 2024","Dec 2024","Jan 2025","Feb 2025","Mar 2025","Apr 2025","May 2025","Jun 2025","Jul 2025","Aug 2025","Sep 2025","Oct 2025","Nov 2025","Dec 2025"],"categories":["Abduction and kidnapping","Against justice procedures","Arson","Assault","Betting and gaming offences","Blackmail and extortion","Coercive Control","Disorderly conduct","Drug offences","Homicide","Intimidation, stalking and harassment","Liquor offences","Malicious damage to property","Other offences","Other offences against the person","Pornography offences","Prohibited and regulated weapons offences","Robbery","Sexual offences","Theft","Transport regulatory offences"],"release":"2025 Q4 (Dec 2025)","source":"NSW BOCSAR Recorded Criminal Incidents by Suburb"},"sample":{"Sydney":{"s":"sydney","c":{"Homicide":{"a":[1,2,1,2,1,2,1,0,0,2,2,2,1,1,1,0],"m":[0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},"Assault":{"a":[1360,1393,1214,1195,1102,1140,1147,1187,1143,1154,802,734,1107,1046,1091,1085],"m":[97,80,86,89,79,93,83,91,74,101,95,123,81,71,114,86,99,89,81,71,74,111,108,100]},"Sexual offences":{"a":[131,105,115,141,129,139,146,258,191,208,145,143,193,182,234,214],"m":[7,20,13,14,35,23,17,21,22,19,15,28,21,20,16,15,13,16,11,24,16,22,16,24]},"Abduction and kidnapping":{"a":[0,4,5,1,4,0,1,1,0,1,1,0,3,1,3,2],"m":[0,0,0,1,0,0,1,0,0,1,0,0,1,0,0,0,1,0,0,0,0,0,0,0]},"Robbery":{"a":[140,138,105,112,59,64,40,49,55,33,36,18,33,50,55,48],"m":[4,2,4,7,6,3,2,0,6,7,12,2,2,4,5,7,6,1,1,1,4,4,6,7]},"Blackmail and extortion":{"a":[3,7,2,3,4,3,3,6,0,0,1,2,2,17,7,9],"m":[0,1,0,1,1,2,0,0,1,0,1,0,2,0,1,3,0,0,1,0,0,2,0,0]},"Coercive Control":{"a":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],"m":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0]},"Intimidation, stalking and harassment":{"a":[285,281,248,226,210,222,274,241,264,267,285,289,361,395,333,355],"m":[19,27,26,45,25,28,36,36,18,26,20,27,29,37,39,26,29,22,30,29,30,40,22,22]},"Other offences against the person":{"a":[20,18,9,21,17,14,9,7,11,15,16,23,12,12,13,10],"m":[2,0,1,1,2,2,1,0,0,2,1,1,1,0,1,3,0,0,1,0,1,0,1,2]},"Theft":{"a":[6887,6592,7017,7336,7119,6105,5653,5321,4553,4280,2683,2276,2820,3101,3041,3180],"m":[235,244,300,247,250,266,244,284,208,251,245,267,259,244,255,263,286,223,251,257,260,276,271,335]},"Arson":{"a":[1,7,5,3,2,5,3,5,7,6,3,3,4,6,5,2],"m":[1,0,0,0,2,0,0,0,1,1,0,0,0,1,0,0,0,0,0,0,0,0,0,1]},"Malicious damage to property":{"a":[571,569,517,529,433,422,410,370,368,412,327,291,405,373,380,408],"m":[24,36,33,33,29,29,32,31,34,30,31,38,27,26,45,30,45,35,31,33,28,40,34,34]},"Drug offences":{"a":[611,527,688,923,783,998,1022,1250,1289,1194,1153,840,946,917,846,769],"m":[147,45,145,41,41,37,27,34,52,108,106,63,183,30,42,54,48,66,39,36,64,50,111,46]},"Prohibited and regulated weapons offences":{"a":[128,107,102,76,95,107,78,124,130,157,173,187,138,192,188,171],"m":[10,17,16,20,16,14,17,18,13,21,14,12,16,9,16,16,24,10,24,10,12,15,9,10]},"Disorderly conduct":{"a":[703,647,748,669,549,501,522,481,503,571,523,531,498,519,518,546],"m":[30,40,59,37,31,46,45,55,39,43,39,54,41,40,52,46,47,31,41,46,45,55,35,67]},"Betting and gaming offences":{"a":[3,5,3,0,2,1,1,0,2,9,1,1,0,2,0,1],"m":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0]},"Liquor offences":{"a":[835,964,931,935,672,804,1092,799,949,1194,800,712,658,366,321,336],"m":[30,24,20,17,19,32,25,28,29,30,36,31,21,30,26,45,16,48,32,29,27,10,23,29]},"Pornography offences":{"a":[1,3,2,1,4,4,1,3,2,3,6,3,5,1,4,3],"m":[0,0,0,1,0,0,0,2,0,1,0,0,0,0,1,0,0,0,1,0,0,0,0,1]},"Against justice procedures":{"a":[1069,823,506,566,527,497,535,519,501,565,671,731,833,733,697,705],"m":[49,61,67,53,55,55,55,63,58,61,66,54,46,66,48,69,75,60,55,54,56,62,66,48]},"Transport regulatory offences":{"a":[444,400,383,679,658,908,806,674,945,1035,978,1129,713,820,633,468],"m":[46,61,74,48,86,70,56,46,28,30,30,58,61,56,43,39,40,27,60,37,22,34,30,19]},"Other offences":{"a":[372,386,417,424,388,517,668,481,518,463,1051,3220,583,294,278,345],"m":[20,22,20,23,24,18,21,24,39,22,25,20,33,21,36,38,42,32,23,23,22,34,27,14]}},"t":8658},"Parramatta":{"s":"parramatta","c":{"Homicide":{"a":[0,0,1,1,1,1,0,1,1,1,1,0,0,0,1,1],"m":[0,0,0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0]},"Assault":{"a":[553,565,557,571,480,476,430,487,474,489,486,451,539,560,571,652],"m":[62,53,63,42,51,46,42,47,37,37,51,40,47,56,64,60,64,58,52,44,49,47,54,57]},"Sexual offences":{"a":[59,66,62,54,95,56,82,76,80,92,67,94,119,94,113,111],"m":[7,10,10,9,4,13,9,9,9,10,8,15,7,5,6,10,12,14,7,16,10,9,10,5]},"Abduction and kidnapping":{"a":[3,3,2,3,1,0,0,0,0,0,3,1,2,1,1,3],"m":[0,0,0,0,0,0,0,0,0,0,0,1,0,1,1,0,1,0,0,0,0,0,0,0]},"Robbery":{"a":[107,91,75,94,62,44,29,47,35,47,38,28,23,53,31,23],"m":[7,4,3,4,3,1,1,2,2,1,1,2,5,3,0,0,3,3,3,1,0,2,2,1]},"Blackmail and extortion":{"a":[2,3,3,1,3,3,1,1,2,0,2,0,2,5,12,12],"m":[3,1,1,1,0,0,2,1,1,1,1,0,1,1,1,0,0,1,1,1,0,1,2,3]},"Coercive Control":{"a":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],"m":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0]},"Intimidation, stalking and harassment":{"a":[193,252,253,229,236,214,203,220,243,228,238,285,279,263,273,334],"m":[29,26,20,26,22,24,16,21,20,18,26,25,27,28,36,20,29,26,26,28,27,25,28,34]},"Other offences against the person":{"a":[8,15,20,7,9,11,13,7,11,12,6,9,11,15,7,13],"m":[0,0,2,2,0,0,1,0,1,0,0,1,1,2,1,1,3,0,1,2,0,0,0,2]},"Theft":{"a":[2714,2709,2989,2972,2792,2641,2527,2596,2458,2579,1989,1738,2194,3008,2637,2819],"m":[225,192,159,214,233,201,224,223,226,227,253,260,254,209,234,211,239,229,229,262,264,233,221,234]},"Arson":{"a":[10,9,15,19,13,12,11,13,10,11,9,8,6,8,13,14],"m":[1,0,1,1,1,2,2,1,3,0,0,1,4,2,1,1,0,1,0,1,1,2,0,1]},"Malicious damage to property":{"a":[411,414,429,428,410,362,315,385,365,409,311,255,268,270,258,300],"m":[24,31,25,18,26,14,18,20,25,16,23,18,32,16,23,21,13,34,25,33,25,27,24,27]},"Drug offences":{"a":[161,205,315,270,294,260,291,410,531,666,653,596,882,712,881,1099],"m":[46,72,89,91,50,58,58,78,78,74,75,112,87,69,110,98,80,79,111,104,76,81,120,84]},"Prohibited and regulated weapons offences":{"a":[70,85,97,95,116,121,107,94,155,184,184,135,209,185,240,317],"m":[20,11,11,24,10,27,16,11,18,24,26,42,21,18,45,14,33,20,30,31,19,26,26,34]},"Disorderly conduct":{"a":[204,199,245,265,250,207,163,148,157,170,165,153,196,324,308,399],"m":[31,17,21,22,28,24,33,24,26,25,27,30,45,28,47,28,28,38,33,33,32,22,29,36]},"Betting and gaming offences":{"a":[0,0,1,4,0,0,0,0,0,0,0,0,0,1,1,0],"m":[1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},"Liquor offences":{"a":[147,154,227,269,196,188,149,70,62,87,84,172,150,54,35,81],"m":[2,8,6,4,0,4,3,1,0,0,4,3,3,5,7,9,3,10,8,5,3,16,4,8]},"Pornography offences":{"a":[0,1,3,0,0,1,7,1,4,5,3,2,5,8,5,4],"m":[0,0,0,0,0,3,1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,2,1,0]},"Against justice procedures":{"a":[585,680,1208,1318,1409,1324,1607,836,838,964,946,1159,568,462,981,1559],"m":[29,50,38,52,76,85,87,105,109,125,97,128,124,116,156,152,145,117,157,114,107,125,113,133]},"Transport regulatory offences":{"a":[870,946,1172,1741,3702,4469,2860,3842,4454,4238,3137,4439,4027,3469,3006,1733],"m":[240,311,338,264,227,295,289,239,193,182,205,223,184,114,184,165,157,117,195,204,133,103,104,73]},"Other offences":{"a":[104,82,87,140,137,146,155,194,261,280,548,2419,516,205,244,278],"m":[20,16,11,30,21,12,14,15,12,20,24,49,16,23,26,17,26,21,24,39,17,20,24,25]}},"t":9753},"Surry Hills":{"s":"surry-hills","c":{"Homicide":{"a":[0,2,1,0,0,1,0,0,1,2,0,0,0,0,0,0],"m":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},"Assault":{"a":[427,391,364,425,346,364,394,349,376,480,346,331,343,373,345,420],"m":[28,43,37,18,29,27,31,28,32,26,25,21,27,42,38,39,46,28,30,37,22,46,33,32]},"Sexual offences":{"a":[36,24,25,34,38,41,39,57,57,59,52,47,60,58,91,87],"m":[9,6,5,8,9,8,6,8,6,8,10,8,4,5,7,3,10,7,4,6,8,10,9,14]},"Abduction and kidnapping":{"a":[1,0,3,0,1,2,0,0,1,1,4,0,1,3,2,0],"m":[0,1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},"Robbery":{"a":[96,72,88,64,49,35,36,36,26,19,20,8,12,21,31,27],"m":[1,5,2,3,3,1,0,3,3,6,3,1,0,6,3,4,2,2,1,2,2,3,1,1]},"Blackmail and extortion":{"a":[1,2,1,0,3,1,1,0,0,2,1,0,3,10,8,8],"m":[1,0,1,1,0,0,0,2,2,0,1,0,3,1,2,0,1,0,0,0,0,0,0,1]},"Coercive Control":{"a":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],"m":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0]},"Intimidation, stalking and harassment":{"a":[106,73,93,99,83,99,111,129,122,184,164,135,123,148,168,157],"m":[14,8,15,9,13,15,15,13,25,14,17,10,8,14,10,13,6,22,12,12,14,20,7,19]},"Other offences against the person":{"a":[9,3,7,10,6,7,7,2,8,9,3,12,7,4,3,5],"m":[0,0,0,0,0,0,1,1,0,0,1,0,0,1,0,0,0,0,0,0,0,1,2,1]},"Theft":{"a":[1706,1904,1892,1933,1669,1551,1751,1487,1576,1619,1089,938,1129,1221,1060,1116],"m":[109,102,78,77,84,96,83,96,75,74,83,103,103,81,99,91,95,86,80,88,90,109,101,93]},"Arson":{"a":[9,5,7,7,5,3,7,8,3,11,3,1,6,7,3,5],"m":[0,0,0,1,0,0,0,2,0,0,0,0,0,0,0,0,1,1,0,0,0,2,0,1]},"Malicious damage to property":{"a":[365,385,313,324,299,286,330,291,312,283,243,198,190,201,208,190],"m":[23,20,13,13,14,22,16,25,18,22,13,9,20,16,19,18,8,14,14,17,13,22,15,14]},"Drug offences":{"a":[396,464,470,474,502,645,628,653,797,877,892,678,639,689,473,662],"m":[65,41,34,34,41,23,28,42,57,34,39,35,37,45,47,28,44,74,43,58,50,59,97,80]},"Prohibited and regulated weapons offences":{"a":[48,63,67,81,92,124,112,76,95,126,106,97,84,84,89,117],"m":[6,14,4,8,6,5,6,6,8,7,5,14,9,9,8,17,4,14,13,5,17,5,8,8]},"Disorderly conduct":{"a":[282,245,259,324,276,247,257,220,236,296,214,213,171,200,128,207],"m":[11,7,16,12,8,6,11,16,16,7,9,9,29,20,14,15,14,14,13,11,16,12,29,20]},"Betting and gaming offences":{"a":[50,4,0,1,0,0,0,0,0,0,1,0,0,0,0,0],"m":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},"Liquor offences":{"a":[276,136,320,340,350,304,231,174,255,93,53,107,152,102,62,68],"m":[4,3,4,3,2,3,0,17,3,4,16,3,5,1,7,4,1,14,5,3,3,6,12,7]},"Pornography offences":{"a":[0,4,1,1,2,3,8,0,2,4,4,3,6,5,0,2],"m":[0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0]},"Against justice procedures":{"a":[524,573,568,687,817,863,1040,832,957,1172,1088,859,752,866,881,810],"m":[82,90,59,70,79,59,78,54,73,86,85,66,54,49,53,72,91,69,60,60,69,82,82,69]},"Transport regulatory offences":{"a":[19,22,18,25,17,25,59,56,57,69,54,137,105,95,80,55],"m":[9,6,11,0,6,12,1,6,5,8,8,8,7,5,1,7,3,3,2,4,9,4,8,2]},"Other offences":{"a":[99,84,124,99,64,50,72,75,74,79,218,678,86,90,59,67],"m":[3,11,7,5,4,4,5,3,7,5,4,1,5,2,5,7,3,10,6,5,6,7,7,4]}},"t":4004},"Newtown":{"s":"newtown","c":{"Homicide":{"a":[0,0,0,0,0,0,0,0,1,0,0,0,3,1,0,0],"m":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},"Assault":{"a":[232,231,214,215,258,252,233,249,267,215,215,208,186,211,229,229],"m":[17,16,21,21,16,29,17,19,18,21,18,16,9,17,30,17,14,15,23,15,25,23,21,20]},"Sexual offences":{"a":[20,15,33,27,33,31,40,39,58,36,49,53,57,59,56,54],"m":[5,5,5,7,5,3,4,5,3,6,0,8,2,1,3,7,2,1,6,6,2,7,12,5]},"Abduction and kidnapping":{"a":[0,1,1,0,0,1,0,1,0,0,0,0,0,1,0,0],"m":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},"Robbery":{"a":[32,33,28,25,18,8,10,13,13,3,9,8,4,10,7,11],"m":[0,0,0,1,0,2,1,1,1,0,0,1,0,1,0,2,0,0,2,0,1,4,1,0]},"Blackmail and extortion":{"a":[2,1,1,1,0,1,0,0,0,0,0,1,0,6,5,3],"m":[1,1,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,1,0,1,0,1,0]},"Coercive Control":{"a":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2],"m":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1]},"Intimidation, stalking and harassment":{"a":[64,62,54,52,41,50,64,51,50,54,98,80,81,93,107,80],"m":[4,8,10,10,10,10,9,7,11,8,13,7,7,11,8,5,3,9,7,2,7,9,5,7]},"Other offences against the person":{"a":[1,7,1,5,6,1,5,6,0,1,2,8,7,6,2,5],"m":[0,1,0,1,0,0,0,0,0,0,0,0,0,2,0,0,0,1,0,0,1,0,1,0]},"Theft":{"a":[1082,983,981,1090,1098,1146,892,797,787,800,620,677,648,577,549,576],"m":[51,67,50,65,39,32,33,42,50,44,43,33,40,29,53,47,56,43,40,55,60,52,52,49]},"Arson":{"a":[6,3,10,9,6,7,6,5,3,2,3,1,3,0,2,4],"m":[0,1,0,0,0,0,1,0,0,0,0,0,2,0,0,0,0,0,0,1,0,0,0,1]},"Malicious damage to property":{"a":[303,363,310,263,230,189,209,208,183,192,151,143,173,125,146,145],"m":[15,9,12,9,20,8,17,14,14,9,9,10,15,14,15,12,9,7,12,13,13,13,12,10]},"Drug offences":{"a":[274,209,236,269,314,330,318,289,283,449,360,378,290,302,127,121],"m":[10,11,12,12,13,9,6,12,7,17,6,12,6,10,4,14,6,19,17,7,11,8,5,14]},"Prohibited and regulated weapons offences":{"a":[26,21,22,27,23,36,31,54,41,108,61,42,41,36,34,22],"m":[4,5,8,1,3,0,1,1,1,3,4,3,2,2,0,1,3,3,2,2,2,0,3,2]},"Disorderly conduct":{"a":[101,114,116,85,114,135,106,132,104,165,96,115,101,93,74,66],"m":[4,12,10,5,11,2,1,3,8,5,9,4,1,2,6,5,4,9,7,5,4,4,11,8]},"Liquor offences":{"a":[93,100,83,63,126,109,94,158,118,273,78,104,290,155,148,165],"m":[30,14,6,16,16,5,15,6,18,4,5,13,8,8,14,4,3,19,21,10,10,41,12,15]},"Pornography offences":{"a":[0,1,0,0,2,2,0,0,1,0,2,4,5,2,1,0],"m":[0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},"Against justice procedures":{"a":[701,976,407,375,414,357,412,334,369,468,438,510,377,443,466,474],"m":[48,31,44,33,32,26,47,40,52,43,35,35,42,42,45,52,41,34,43,30,49,38,26,32]},"Transport regulatory offences":{"a":[319,181,82,122,206,224,435,524,556,792,574,658,527,541,191,179],"m":[49,9,27,13,7,7,10,11,0,37,3,18,9,1,5,17,4,5,37,24,43,22,4,8]},"Other offences":{"a":[45,27,47,43,32,32,45,36,30,54,113,507,48,26,23,28],"m":[2,2,1,2,5,1,1,1,2,2,3,1,3,1,1,2,4,7,3,1,0,0,5,1]}},"t":2164},"Blacktown":{"s":"blacktown","c":{"Homicide":{"a":[4,0,0,1,0,0,1,0,1,0,0,1,0,0,0,1],"m":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0]},"Assault":{"a":[720,856,816,853,772,767,708,738,799,756,873,768,753,766,826,806],"m":[57,70,76,58,74,59,74,67,74,72,70,75,65,56,76,50,72,74,65,70,68,70,67,73]},"Sexual offences":{"a":[90,84,93,92,115,119,116,121,122,121,176,147,155,146,168,171],"m":[14,13,12,15,15,15,6,7,14,16,21,20,7,15,22,12,15,10,13,11,15,24,15,12]},"Abduction and kidnapping":{"a":[3,2,2,6,2,4,4,1,3,1,0,1,2,2,3,5],"m":[0,0,0,0,0,0,0,0,0,1,1,1,1,0,2,0,0,1,0,0,0,1,0,0]},"Robbery":{"a":[75,58,39,85,59,68,57,50,54,35,24,35,37,35,37,31],"m":[4,3,3,0,5,4,5,4,4,1,2,2,2,3,4,2,0,0,1,2,4,6,3,4]},"Blackmail and extortion":{"a":[3,1,4,0,1,1,0,0,2,1,1,3,16,16,14,13],"m":[1,0,1,4,0,2,3,0,1,1,0,1,1,0,1,1,1,0,0,2,3,1,0,3]},"Coercive Control":{"a":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5],"m":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,2,1,0,0,0,0]},"Intimidation, stalking and harassment":{"a":[369,412,363,394,394,360,335,290,352,399,505,491,492,483,513,515],"m":[39,27,37,42,48,36,39,46,47,47,52,53,59,51,42,36,42,37,47,48,37,43,38,35]},"Other offences against the person":{"a":[11,6,14,21,16,17,12,3,6,8,14,18,10,12,13,10],"m":[2,2,0,2,2,0,3,0,1,0,1,0,2,1,1,1,2,1,0,0,1,0,1,0]},"Theft":{"a":[2440,2373,2615,2630,2474,2729,2743,2756,2524,2270,1764,1820,2049,1915,1558,1675],"m":[123,147,115,127,154,123,130,129,114,139,103,154,117,134,142,146,125,161,141,137,125,162,134,151]},"Arson":{"a":[54,54,49,53,44,29,27,21,23,17,15,19,9,16,16,18],"m":[1,3,2,1,2,0,0,3,0,0,4,0,4,0,2,1,0,1,0,1,0,3,5,1]},"Malicious damage to property":{"a":[757,685,736,831,647,560,517,549,524,514,470,449,426,390,410,384],"m":[35,31,36,36,32,33,36,26,36,39,34,36,36,30,37,27,29,31,32,32,31,31,32,36]},"Drug offences":{"a":[210,236,311,170,245,242,355,254,251,321,283,315,474,368,417,454],"m":[30,27,25,27,37,33,50,48,41,29,32,38,34,43,43,31,22,35,26,38,55,41,45,41]},"Prohibited and regulated weapons offences":{"a":[67,88,71,72,114,109,101,88,92,138,107,142,182,158,163,160],"m":[12,9,6,18,14,10,25,15,15,12,14,13,13,15,15,10,11,11,12,10,20,12,19,12]},"Disorderly conduct":{"a":[263,207,248,214,165,162,156,147,152,139,135,114,166,182,213,182],"m":[15,10,8,10,23,17,16,25,27,17,24,21,12,16,19,14,10,10,13,19,17,15,15,22]},"Betting and gaming offences":{"a":[4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"m":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},"Liquor offences":{"a":[153,174,146,113,77,76,98,95,95,56,84,57,47,38,38,28],"m":[6,3,1,6,0,6,4,4,1,2,1,4,0,6,2,1,3,0,7,1,1,2,4,1]},"Pornography offences":{"a":[3,4,2,5,5,6,1,8,8,4,7,4,4,4,7,9],"m":[1,0,0,1,4,0,0,0,1,0,0,0,0,2,0,0,1,1,0,0,0,0,2,3]},"Against justice procedures":{"a":[846,926,946,1035,888,1061,1128,1047,1056,1299,1033,1239,1251,1210,1298,1247],"m":[119,116,98,91,93,99,125,118,105,109,122,103,97,100,125,83,90,107,111,98,94,132,118,92]},"Transport regulatory offences":{"a":[2108,1990,2521,3606,5218,9521,9980,11189,6667,6916,5989,7091,6894,4254,4430,2181],"m":[98,345,370,297,349,496,592,591,414,325,253,300,312,254,223,133,125,139,212,260,147,177,113,86]},"Other offences":{"a":[203,184,136,90,96,103,106,98,88,126,230,2436,570,108,146,144],"m":[6,10,2,14,13,17,16,15,12,9,11,21,14,16,12,12,11,8,10,10,20,7,14,10]}},"t":8039},"Bondi Beach":{"s":"bondi-beach","c":{"Homicide":{"a":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,16],"m":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,16]},"Assault":{"a":[194,170,143,180,144,159,195,157,169,130,157,148,155,157,126,141],"m":[13,13,10,11,5,5,6,9,12,20,6,16,5,11,8,19,14,11,4,8,13,10,25,13]},"Sexual offences":{"a":[18,23,21,10,20,15,22,24,28,35,24,30,34,34,35,38],"m":[12,2,5,0,2,2,3,2,1,1,0,5,6,6,4,2,2,4,3,0,1,2,6,2]},"Abduction and kidnapping":{"a":[0,0,1,0,0,0,0,1,0,1,0,0,0,0,0,0],"m":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},"Robbery":{"a":[10,13,8,9,9,3,2,2,2,6,1,7,3,2,7,3],"m":[0,1,0,1,0,0,1,0,2,0,0,2,0,0,0,0,0,0,0,0,1,1,0,1]},"Blackmail and extortion":{"a":[0,0,0,0,0,0,0,0,0,0,0,0,5,1,2,1],"m":[0,1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0]},"Intimidation, stalking and harassment":{"a":[40,39,32,30,27,56,53,42,38,50,53,44,57,76,57,67],"m":[7,6,3,4,9,3,4,5,3,7,0,6,3,5,7,5,3,5,4,4,7,4,13,7]},"Other offences against the person":{"a":[1,2,2,0,2,3,3,2,0,3,2,8,3,1,2,4],"m":[0,0,0,0,0,0,0,1,1,0,0,0,0,0,1,1,0,0,0,2,0,0,0,0]},"Theft":{"a":[805,741,658,687,630,574,605,528,480,495,393,310,309,394,360,316],"m":[41,39,32,20,20,11,16,28,43,37,40,33,29,12,27,32,41,14,24,23,19,34,33,28]},"Arson":{"a":[6,1,2,3,1,1,1,1,4,2,4,5,1,1,2,1],"m":[0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,1,0,0,0,0,0,0,0,0]},"Malicious damage to property":{"a":[178,173,167,119,121,115,142,109,97,90,93,83,68,87,67,60],"m":[10,3,9,3,4,5,5,6,6,5,7,4,4,6,3,4,3,3,7,3,4,3,17,3]},"Drug offences":{"a":[129,124,104,167,155,206,206,233,245,214,266,256,256,195,166,118],"m":[12,23,8,6,10,10,9,25,18,13,16,16,20,11,6,10,8,8,11,2,7,10,19,6]},"Prohibited and regulated weapons offences":{"a":[17,11,13,16,10,14,20,18,19,17,29,23,20,10,10,17],"m":[1,0,1,0,1,0,0,2,1,4,0,0,2,0,2,3,1,0,0,1,3,0,3,2]},"Disorderly conduct":{"a":[62,90,93,94,114,84,95,65,72,73,68,61,63,50,47,52],"m":[7,5,3,2,3,0,3,6,6,4,5,3,1,0,4,5,1,5,0,4,5,7,11,9]},"Liquor offences":{"a":[132,208,130,160,148,104,100,74,91,90,75,115,85,72,89,76],"m":[9,11,3,1,10,3,15,6,4,11,3,13,11,2,2,0,1,14,10,19,4,1,2,10]},"Pornography offences":{"a":[1,0,0,0,1,0,0,1,1,0,0,0,0,0,0,1],"m":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0]},"Against justice procedures":{"a":[108,117,110,120,107,141,205,179,116,176,165,165,141,143,159,128],"m":[20,10,11,10,19,10,13,17,13,11,13,12,7,9,3,14,6,12,14,5,12,18,16,12]},"Transport regulatory offences":{"a":[10,20,14,24,18,19,15,13,31,28,10,9,5,9,6,12],"m":[0,0,0,0,0,0,0,0,1,2,1,2,1,1,0,1,2,0,2,0,0,0,3,2]},"Other offences":{"a":[28,23,23,33,18,33,24,18,27,36,101,597,23,18,26,28],"m":[2,0,2,0,6,0,1,6,2,5,1,1,2,2,6,2,1,1,2,1,2,4,2,3]}},"t":1079},"Penrith":{"s":"penrith","c":{"Homicide":{"a":[0,0,0,1,0,0,0,0,0,1,0,0,0,1,1,1],"m":[0,0,0,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,0,0]},"Assault":{"a":[500,433,366,418,373,412,368,454,503,555,563,452,496,541,531,545],"m":[43,43,50,41,52,43,34,32,44,45,42,62,41,45,45,49,38,51,31,45,50,44,49,57]},"Sexual offences":{"a":[56,45,53,50,57,64,62,109,87,102,72,90,100,100,107,122],"m":[14,4,8,7,13,4,7,11,2,15,16,6,5,8,11,14,9,8,19,5,8,14,16,5]},"Abduction and kidnapping":{"a":[1,5,2,1,2,1,3,1,3,0,1,0,1,1,1,1],"m":[0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0]},"Robbery":{"a":[36,34,34,37,35,17,19,21,28,32,25,21,19,17,13,19],"m":[1,2,2,0,0,2,0,0,0,2,1,3,0,2,2,1,1,1,4,2,0,1,3,2]},"Blackmail and extortion":{"a":[0,0,0,1,0,0,0,0,0,0,0,1,3,6,1,5],"m":[0,0,0,1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,2,0,0,0,1,1]},"Coercive Control":{"a":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1],"m":[0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0]},"Intimidation, stalking and harassment":{"a":[180,201,179,177,171,159,199,206,214,264,330,278,280,284,314,338],"m":[29,28,28,26,27,33,28,18,20,19,27,31,38,26,24,30,31,31,24,29,27,33,26,19]},"Other offences against the person":{"a":[8,9,5,6,6,5,10,3,8,2,7,12,9,11,7,10],"m":[1,0,0,1,0,0,2,1,0,1,0,1,2,0,1,0,2,0,1,2,0,0,0,2]},"Theft":{"a":[1726,1636,1518,1882,1569,1765,1799,1808,1974,2156,1472,1543,1443,1815,1649,1765],"m":[137,127,140,113,138,138,128,174,143,141,119,151,167,125,150,130,192,160,115,152,133,145,138,158]},"Arson":{"a":[35,22,28,34,54,31,32,43,25,27,14,18,14,33,5,16],"m":[1,1,0,0,0,2,0,0,0,1,0,0,2,1,0,3,1,0,0,2,3,3,0,1]},"Malicious damage to property":{"a":[562,451,433,477,402,350,352,337,403,429,409,368,370,377,340,373],"m":[35,28,31,33,27,21,24,30,28,30,24,29,34,28,29,24,35,27,20,29,33,46,37,31]},"Drug offences":{"a":[266,252,275,245,224,314,336,326,308,299,267,233,311,280,296,330],"m":[19,27,25,30,27,14,22,21,29,13,28,41,36,11,25,26,14,22,17,28,41,49,26,35]},"Prohibited and regulated weapons offences":{"a":[80,63,39,73,44,94,114,73,89,100,95,87,123,102,101,116],"m":[5,12,8,8,8,11,7,7,4,3,11,17,20,6,5,10,5,6,18,6,10,11,10,9]},"Disorderly conduct":{"a":[315,233,184,167,128,133,172,130,148,149,120,94,126,145,170,247],"m":[7,4,10,12,9,17,8,12,18,19,30,24,16,17,18,19,25,15,26,30,26,32,13,10]},"Betting and gaming offences":{"a":[0,0,0,0,0,0,0,0,0,0,1,0,0,0,2,0],"m":[0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},"Liquor offences":{"a":[246,128,37,50,35,54,48,42,57,78,43,34,121,28,40,33],"m":[0,1,2,15,2,4,2,4,3,1,1,5,3,2,4,5,2,2,1,3,4,4,2,1]},"Pornography offences":{"a":[2,5,2,1,3,3,1,2,1,4,4,4,6,5,5,11],"m":[0,0,0,0,0,0,0,2,0,0,2,1,4,0,1,0,1,1,0,0,0,0,3,1]},"Against justice procedures":{"a":[410,429,333,507,576,649,882,974,1038,999,982,915,1160,1205,1316,1245],"m":[106,98,129,116,123,107,115,111,89,98,111,113,122,81,105,135,94,81,101,120,62,97,116,131]},"Transport regulatory offences":{"a":[1187,1252,1131,1254,1625,3287,1936,2023,3403,3200,2205,2140,2859,3026,3684,1419],"m":[293,196,146,346,248,328,399,441,427,342,230,288,161,138,164,209,174,102,113,57,89,80,53,79]},"Other offences":{"a":[102,96,88,95,96,105,143,101,113,78,109,673,244,78,86,109],"m":[3,13,10,11,4,7,7,8,4,4,5,10,13,7,6,10,13,9,7,9,12,10,8,5]}},"t":6706},"Chatswood":{"s":"chatswood","c":{"Homicide":{"a":[1,0,1,0,0,0,0,2,0,1,0,0,0,0,0,0],"m":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},"Assault":{"a":[129,100,126,126,110,112,119,143,138,153,129,103,135,160,162,172],"m":[9,8,24,13,14,9,12,23,12,16,12,10,15,10,17,17,15,11,15,15,13,11,18,15]},"Sexual offences":{"a":[16,26,29,41,23,25,34,51,35,30,33,44,58,49,50,36],"m":[4,3,5,2,9,7,5,3,2,3,5,2,2,1,3,2,4,2,4,3,6,2,7,0]},"Abduction and kidnapping":{"a":[0,1,0,0,0,0,1,0,2,1,0,0,0,1,0,0],"m":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},"Robbery":{"a":[23,15,15,14,8,7,6,8,14,11,7,5,10,5,9,3],"m":[1,0,0,3,0,0,1,2,0,0,2,0,0,2,0,0,0,0,0,0,0,0,1,0]},"Blackmail and extortion":{"a":[0,0,0,0,0,1,0,3,1,0,0,1,1,9,9,1],"m":[1,2,1,1,0,0,2,0,0,0,1,1,0,0,0,1,0,0,0,0,0,0,0,0]},"Intimidation, stalking and harassment":{"a":[38,57,42,30,62,42,50,50,63,71,54,69,68,58,65,69],"m":[4,7,8,7,4,8,0,6,9,3,4,5,7,6,12,4,6,3,8,5,1,5,6,6]},"Other offences against the person":{"a":[5,2,5,4,2,2,2,4,5,3,6,3,1,5,5,2],"m":[2,0,0,0,0,0,2,0,0,1,0,0,0,0,0,0,1,0,0,0,0,1,0,0]},"Theft":{"a":[1376,1286,1305,1260,1134,1123,1285,1299,1352,1361,1059,784,849,836,923,1011],"m":[65,64,99,72,58,58,90,108,80,88,72,69,98,70,91,83,84,71,97,82,74,79,84,98]},"Arson":{"a":[3,4,7,2,2,0,2,3,3,3,3,3,0,5,3,3],"m":[0,0,0,1,0,0,0,1,0,0,1,0,0,0,1,1,0,1,0,0,0,0,0,0]},"Malicious damage to property":{"a":[147,170,242,161,142,170,126,142,151,140,102,90,80,91,101,97],"m":[5,10,7,5,9,10,8,17,11,1,10,8,4,9,8,14,7,7,14,12,6,2,9,5]},"Drug offences":{"a":[89,60,99,105,90,86,111,139,135,117,104,104,114,90,132,91],"m":[13,12,24,6,9,16,9,11,9,6,6,11,9,3,6,10,5,5,8,13,9,9,5,9]},"Prohibited and regulated weapons offences":{"a":[30,12,24,19,21,24,19,50,37,40,25,43,24,24,47,29],"m":[6,3,5,4,5,3,3,7,8,0,1,2,1,2,7,4,5,0,2,0,3,1,1,3]},"Disorderly conduct":{"a":[45,64,54,34,47,49,64,94,65,73,71,47,58,67,96,83],"m":[3,13,14,9,12,4,6,13,4,7,3,8,17,5,4,4,9,7,8,9,4,7,6,3]},"Betting and gaming offences":{"a":[0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0],"m":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},"Liquor offences":{"a":[32,45,15,17,13,54,54,66,53,18,38,72,63,46,19,8],"m":[0,4,3,0,3,2,0,4,1,0,1,1,0,0,0,0,0,2,1,2,1,0,0,2]},"Pornography offences":{"a":[0,1,0,0,0,0,2,1,0,1,1,2,1,3,2,2],"m":[0,0,1,0,0,0,0,0,0,0,0,1,0,0,1,0,0,0,1,0,0,0,0,0]},"Against justice procedures":{"a":[297,307,268,257,121,277,219,346,271,195,311,261,285,250,274,356],"m":[16,23,29,24,20,22,24,8,17,30,33,28,31,25,30,41,36,20,20,34,41,34,27,17]},"Transport regulatory offences":{"a":[1230,1044,637,1290,998,770,990,680,762,479,409,477,498,1187,949,1288],"m":[108,104,65,51,69,54,121,72,58,52,80,115,131,79,98,140,104,119,129,83,90,81,103,131]},"Other offences":{"a":[39,43,31,25,37,32,28,33,59,48,39,413,158,24,27,23],"m":[1,1,4,3,3,2,0,4,5,1,1,2,2,2,3,0,3,2,4,0,1,0,2,4]}},"t":3274},"Liverpool":{"s":"liverpool","c":{"Homicide":{"a":[4,2,0,1,1,2,1,1,0,1,3,0,0,1,1,0],"m":[0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},"Assault":{"a":[571,547,467,522,494,454,558,494,512,556,553,506,566,704,679,698],"m":[61,77,69,53,40,47,58,53,47,49,51,74,63,74,63,57,59,43,48,70,48,50,64,59]},"Sexual offences":{"a":[69,62,61,72,79,61,78,83,70,94,98,78,87,126,110,125],"m":[12,11,11,8,8,8,6,9,13,11,6,7,7,12,12,10,7,10,10,14,8,12,9,14]},"Abduction and kidnapping":{"a":[5,5,7,5,4,2,5,2,1,2,4,1,2,2,0,0],"m":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},"Robbery":{"a":[83,86,65,61,52,34,24,44,39,43,47,23,24,27,37,32],"m":[6,2,2,9,3,4,2,2,1,2,1,3,4,4,2,4,4,3,1,2,0,3,2,3]},"Blackmail and extortion":{"a":[1,2,2,6,0,1,1,0,1,1,1,0,4,5,2,4],"m":[0,1,0,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,1,1,1,0,0,0]},"Coercive Control":{"a":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0],"m":[0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},"Intimidation, stalking and harassment":{"a":[216,215,225,244,215,265,239,219,192,245,285,235,305,328,308,321],"m":[25,22,26,25,31,25,28,13,31,25,28,29,27,27,23,29,32,20,31,28,16,25,25,38]},"Other offences against the person":{"a":[17,6,6,9,14,12,18,3,6,14,9,18,7,19,28,13],"m":[2,3,2,4,1,6,1,2,1,3,3,0,0,1,1,1,3,0,2,4,0,0,1,0]},"Theft":{"a":[2069,2561,2765,2684,2400,2420,2239,2223,1899,2102,1584,1460,1678,1832,1801,1801],"m":[168,109,138,163,168,164,146,174,132,145,161,133,163,128,144,132,192,161,135,140,145,144,151,166]},"Arson":{"a":[30,25,21,28,20,24,8,12,17,12,10,10,12,14,13,9],"m":[1,0,0,3,0,4,1,2,0,0,1,1,4,0,0,1,0,0,0,0,0,0,3,1]},"Malicious damage to property":{"a":[438,501,377,441,341,383,334,385,353,434,341,317,382,342,310,317],"m":[25,27,27,26,24,27,23,24,16,19,38,34,30,34,28,25,31,19,31,14,23,24,26,32]},"Drug offences":{"a":[310,280,340,402,539,518,425,431,480,1313,1087,1371,1124,1183,859,986],"m":[95,60,66,116,66,46,96,71,67,48,53,75,66,27,43,47,67,78,106,115,125,109,77,126]},"Prohibited and regulated weapons offences":{"a":[71,88,72,73,142,141,104,116,111,230,167,160,150,149,175,183],"m":[18,10,10,11,17,10,14,16,10,25,17,17,18,6,11,8,11,11,18,21,17,18,19,25]},"Disorderly conduct":{"a":[201,263,190,185,159,121,158,130,180,181,133,96,103,110,118,174],"m":[19,8,6,5,9,4,11,13,11,7,12,13,22,17,13,9,4,22,7,10,11,15,16,28]},"Betting and gaming offences":{"a":[1,0,1,0,0,1,0,0,0,0,0,0,0,0,1,0],"m":[0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},"Liquor offences":{"a":[159,186,88,52,30,18,79,68,36,39,48,66,77,42,15,30],"m":[0,1,1,0,0,3,3,2,1,2,1,1,1,0,1,0,0,6,3,2,3,2,3,9]},"Pornography offences":{"a":[0,2,2,7,0,3,3,5,5,8,3,3,6,6,5,10],"m":[0,0,1,0,1,1,1,1,0,0,0,0,0,1,1,1,0,1,1,0,1,2,1,1]},"Against justice procedures":{"a":[682,1063,501,471,392,384,509,524,479,775,946,917,886,1014,1166,1544],"m":[59,80,68,82,94,73,142,126,126,102,100,114,131,118,124,131,141,129,135,87,127,176,129,116]},"Transport regulatory offences":{"a":[1017,1495,1818,2591,3760,5035,5705,7422,7831,9076,6341,4013,5499,5785,6531,8006],"m":[603,470,359,582,523,479,492,535,442,644,620,782,558,596,563,631,589,664,692,505,674,866,917,751]},"Other offences":{"a":[140,104,167,146,144,128,123,120,124,169,190,2062,448,116,134,134],"m":[7,8,9,14,7,15,12,10,6,13,11,22,6,4,14,7,8,8,18,19,14,11,12,13]}},"t":14387},"Cronulla":{"s":"cronulla","c":{"Homicide":{"a":[0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0],"m":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},"Assault":{"a":[231,221,195,176,151,169,189,195,162,190,140,144,118,132,135,184],"m":[11,8,12,12,6,6,13,10,12,10,13,22,16,12,17,11,7,12,10,18,12,22,20,27]},"Sexual offences":{"a":[22,18,21,19,20,27,27,25,14,30,32,26,27,44,33,39],"m":[1,1,3,7,2,0,0,4,5,2,2,6,2,3,7,1,3,1,4,1,6,4,3,4]},"Abduction and kidnapping":{"a":[0,1,0,0,0,1,0,0,0,1,0,0,0,0,0,1],"m":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0]},"Robbery":{"a":[10,14,16,6,2,3,2,6,2,5,5,2,3,4,1,2],"m":[0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0]},"Blackmail and extortion":{"a":[1,0,0,0,0,1,1,0,0,0,0,0,2,3,3,5],"m":[0,0,0,0,0,1,2,0,0,0,0,0,0,0,1,0,1,1,0,0,0,2,0,0]},"Intimidation, stalking and harassment":{"a":[61,54,59,58,39,45,37,43,61,86,97,76,70,86,86,98],"m":[7,9,7,8,8,6,10,8,4,3,7,9,8,15,12,3,11,4,7,7,8,4,9,10]},"Other offences against the person":{"a":[4,1,2,1,1,3,3,1,3,1,3,2,2,1,2,3],"m":[0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,1,0,0,1,0,1,0,0]},"Theft":{"a":[580,528,506,573,641,514,440,428,397,372,328,246,290,240,211,215],"m":[28,12,33,18,13,9,15,12,13,13,20,25,19,16,18,19,20,13,17,11,23,21,18,20]},"Arson":{"a":[3,1,3,5,4,3,1,4,2,4,0,4,2,1,1,0],"m":[1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},"Malicious damage to property":{"a":[359,319,243,270,183,203,165,152,122,161,81,80,84,67,100,88],"m":[13,4,8,11,8,8,12,8,6,7,4,11,16,5,8,7,5,3,4,6,7,10,12,5]},"Drug offences":{"a":[84,56,79,56,84,94,108,86,109,127,176,116,123,102,84,70],"m":[16,2,0,10,4,8,6,9,4,4,4,17,8,7,9,4,6,7,2,3,12,3,3,6]},"Prohibited and regulated weapons offences":{"a":[19,28,12,10,16,18,17,17,19,20,22,32,29,15,15,16],"m":[3,0,1,0,0,1,2,1,1,3,1,2,1,0,0,0,3,0,1,1,1,4,3,2]},"Disorderly conduct":{"a":[215,220,144,147,108,142,132,107,67,117,79,65,52,41,45,51],"m":[10,1,2,5,2,2,1,5,5,4,3,5,4,3,3,2,5,9,4,3,5,4,4,5]},"Betting and gaming offences":{"a":[0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0],"m":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},"Liquor offences":{"a":[223,183,104,141,138,116,116,87,273,256,97,106,104,68,71,92],"m":[11,3,6,5,6,3,7,2,2,9,5,12,11,3,5,11,11,2,6,7,4,7,5,20]},"Pornography offences":{"a":[0,0,1,2,0,2,0,0,0,3,5,0,3,4,0,3],"m":[0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,2,0,0,0,0,0,0,0]},"Against justice procedures":{"a":[159,153,127,120,146,162,177,165,116,152,190,138,139,143,162,197],"m":[25,14,10,9,14,9,15,14,9,5,14,24,30,21,14,17,9,12,10,9,25,17,19,14]},"Transport regulatory offences":{"a":[649,774,849,657,691,899,868,1311,951,802,704,726,295,283,63,145],"m":[17,3,6,7,2,2,1,6,4,5,5,5,10,5,5,5,17,12,21,6,8,12,21,23]},"Other offences":{"a":[52,53,68,31,35,60,32,39,44,36,119,602,73,23,16,15],"m":[5,0,1,0,2,0,2,3,0,1,0,2,0,0,1,0,0,2,3,0,4,3,0,2]}},"t":1224},"Manly":{"s":"manly","c":{"Homicide":{"a":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0],"m":[0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},"Assault":{"a":[286,302,315,263,253,213,204,248,238,254,169,199,179,197,187,186],"m":[22,10,12,14,16,13,10,18,19,24,10,19,24,14,7,12,13,10,17,16,24,8,23,18]},"Sexual offences":{"a":[17,18,23,28,36,24,25,37,34,24,30,43,54,45,41,48],"m":[5,1,3,2,2,1,6,5,4,2,7,3,5,6,4,3,4,3,9,4,0,1,4,5]},"Abduction and kidnapping":{"a":[1,1,0,0,0,1,1,1,0,0,1,1,0,1,0,0],"m":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},"Robbery":{"a":[17,7,6,8,7,2,4,10,7,7,7,6,4,6,3,3],"m":[0,0,0,0,0,1,0,0,0,0,2,0,0,0,0,0,0,0,0,0,1,1,0,1]},"Blackmail and extortion":{"a":[0,0,0,0,0,0,0,0,0,0,0,1,4,9,4,1],"m":[0,0,2,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1,0]},"Intimidation, stalking and harassment":{"a":[53,49,40,32,42,45,24,39,52,55,63,67,75,78,48,63],"m":[9,1,2,4,6,2,6,1,5,6,1,5,4,5,4,4,3,6,5,3,13,7,3,6]},"Other offences against the person":{"a":[6,4,4,1,8,3,2,6,3,3,4,2,7,3,7,5],"m":[2,0,1,0,2,1,0,0,1,0,0,0,0,0,2,0,0,1,0,1,0,0,1,0]},"Theft":{"a":[969,977,922,880,748,721,771,764,618,596,420,421,408,594,586,463],"m":[59,60,58,47,51,50,39,48,48,50,24,52,41,41,49,41,40,39,34,23,35,32,52,36]},"Arson":{"a":[5,3,7,3,5,2,1,4,5,2,5,3,2,3,4,2],"m":[0,1,1,0,0,2,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0]},"Malicious damage to property":{"a":[285,198,243,191,171,172,164,177,143,164,137,117,94,136,102,76],"m":[11,7,6,14,5,7,7,4,5,10,8,18,11,5,5,6,7,9,1,10,5,1,8,8]},"Drug offences":{"a":[145,124,230,187,107,135,102,88,113,101,89,97,182,222,139,145],"m":[25,10,16,10,13,10,7,8,15,8,6,11,13,8,7,7,12,9,9,11,25,17,14,13]},"Prohibited and regulated weapons offences":{"a":[40,31,32,23,18,12,18,17,23,31,29,23,31,23,29,17],"m":[9,0,2,0,2,3,0,2,1,6,0,4,1,2,0,2,3,2,0,1,2,1,0,3]},"Disorderly conduct":{"a":[388,385,403,254,283,242,262,191,185,131,76,99,96,79,78,71],"m":[17,1,7,6,5,6,6,9,2,8,3,8,5,4,3,5,9,6,6,6,6,8,5,8]},"Betting and gaming offences":{"a":[0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"m":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},"Liquor offences":{"a":[224,178,152,173,140,164,180,172,143,114,114,162,106,89,49,54],"m":[11,1,1,5,2,2,3,5,6,2,6,5,2,2,6,4,8,4,2,4,5,9,4,4]},"Pornography offences":{"a":[1,0,0,1,4,1,0,0,0,0,1,1,2,1,0,2],"m":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0]},"Against justice procedures":{"a":[296,339,376,251,319,268,371,461,642,619,473,320,174,169,209,131],"m":[28,9,16,14,18,20,19,18,13,18,20,16,16,22,9,12,11,7,12,4,9,6,8,15]},"Transport regulatory offences":{"a":[24,23,12,13,16,17,28,14,22,30,39,10,32,34,26,54],"m":[1,0,1,1,0,0,5,3,9,1,2,3,6,0,2,12,7,0,0,11,3,3,3,7]},"Other offences":{"a":[113,93,72,70,51,56,44,51,43,39,146,328,50,27,24,27],"m":[5,2,0,1,3,1,4,3,0,1,0,4,4,5,3,0,1,2,1,1,3,1,3,3]}},"t":1348},"Redfern":{"s":"redfern","c":{"Homicide":{"a":[0,2,0,2,2,1,1,0,0,0,1,1,2,0,1,1],"m":[0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0]},"Assault":{"a":[380,321,332,396,358,344,352,347,368,286,273,249,267,299,303,234],"m":[28,30,31,17,29,28,24,28,12,29,25,22,21,21,17,18,24,14,19,14,19,33,22,12]},"Sexual offences":{"a":[38,35,41,30,33,36,36,25,59,48,25,36,35,52,51,60],"m":[4,4,6,4,4,2,4,5,0,5,6,7,5,6,5,7,2,4,4,3,5,5,5,9]},"Abduction and kidnapping":{"a":[3,2,0,0,0,1,1,1,2,1,1,0,1,1,2,3],"m":[0,0,0,1,0,0,0,1,0,0,0,0,0,1,0,0,0,0,1,0,0,0,1,0]},"Robbery":{"a":[52,64,44,41,32,29,28,16,25,32,11,15,20,16,24,20],"m":[3,2,3,4,0,1,2,1,3,0,3,2,2,5,1,3,1,0,0,0,0,4,3,1]},"Blackmail and extortion":{"a":[0,0,0,0,0,0,1,1,0,0,0,0,0,6,4,2],"m":[1,0,0,1,2,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0]},"Intimidation, stalking and harassment":{"a":[77,60,71,74,88,70,101,120,100,102,110,110,130,139,189,154],"m":[15,11,16,13,32,18,14,14,8,17,17,14,12,6,16,10,15,15,13,13,6,23,12,13]},"Other offences against the person":{"a":[5,1,3,3,4,5,4,1,3,5,4,2,6,3,5,6],"m":[1,0,0,1,0,0,0,1,1,0,1,0,0,0,0,0,1,0,0,1,1,1,0,2]},"Theft":{"a":[1087,1264,1389,1395,1416,1145,1060,885,1084,1052,674,650,887,937,941,956],"m":[81,82,58,71,72,87,98,94,67,81,62,88,83,78,115,62,95,69,58,65,61,95,95,80]},"Arson":{"a":[6,4,6,10,10,7,6,4,7,5,5,6,9,3,11,5],"m":[1,0,0,0,2,1,2,1,1,0,1,2,1,1,1,0,2,0,0,0,0,0,0,0]},"Malicious damage to property":{"a":[285,320,305,303,330,232,277,276,347,246,195,160,182,206,194,172],"m":[15,18,19,14,17,9,11,18,12,22,19,20,8,14,18,16,21,17,8,19,9,12,18,12]},"Drug offences":{"a":[498,501,468,487,572,548,515,484,428,440,308,337,322,416,245,212],"m":[23,36,11,16,17,17,18,29,19,24,19,16,19,16,16,11,21,16,18,21,9,21,28,16]},"Prohibited and regulated weapons offences":{"a":[41,53,43,45,63,70,63,51,43,96,68,90,66,90,63,77],"m":[4,8,4,6,5,8,1,7,6,4,6,4,6,12,6,6,9,5,5,5,3,3,5,12]},"Disorderly conduct":{"a":[162,105,122,116,85,105,127,136,97,101,71,93,95,95,100,94],"m":[5,11,4,4,11,8,7,11,10,10,7,12,6,13,15,6,6,9,7,6,4,8,6,8]},"Betting and gaming offences":{"a":[0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"m":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},"Liquor offences":{"a":[117,54,32,34,25,40,21,23,22,17,23,11,43,26,15,18],"m":[3,0,2,0,0,1,1,1,0,0,5,2,5,3,1,1,0,2,2,4,0,0,0,0]},"Pornography offences":{"a":[0,0,1,2,2,2,2,1,0,2,2,0,2,2,1,3],"m":[0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1,1,0,0,1,0]},"Against justice procedures":{"a":[529,734,793,822,995,981,1036,956,890,1083,889,1047,1068,1327,1414,1206],"m":[114,109,121,121,116,94,96,122,129,140,131,121,96,115,108,102,89,89,100,113,99,113,94,88]},"Transport regulatory offences":{"a":[234,211,226,574,320,962,1929,1005,568,467,269,523,303,744,323,95],"m":[62,61,36,25,21,30,20,22,18,7,14,7,12,7,9,28,14,4,4,8,4,4,0,1]},"Other offences":{"a":[50,81,73,84,60,84,54,61,52,58,117,876,149,53,57,48],"m":[6,7,4,5,4,3,6,5,3,5,5,4,2,4,5,6,2,6,5,4,5,2,3,4]}},"t":3366}},"sydney_list":["Sydney","Parramatta","Surry Hills","Newtown","Blacktown","Bondi Beach","Penrith","Chatswood","Liverpool","Cronulla","Manly","Redfern"]};
+const GROUPS = {"Violent": ["Homicide", "Assault", "Sexual offences", "Robbery", "Abduction and kidnapping", "Intimidation, stalking and harassment", "Coercive Control", "Other offences against the person", "Blackmail and extortion"], "Property": ["Theft", "Malicious damage to property", "Arson"], "Drug & alcohol": ["Drug offences", "Liquor offences"], "Public order": ["Disorderly conduct", "Prohibited and regulated weapons offences", "Betting and gaming offences", "Pornography offences"], "Other": ["Against justice procedures", "Transport regulatory offences", "Other offences"]};
+// DATA_BASE: relative path to the data folder served alongside this file.
+// Set to 'data' for production (GitHub Pages). Set to null to use the embedded 12-suburb demo only.
+const DATA_BASE = 'data';
+let META = EMBED.meta, YEARS = META.years, CATS = META.categories;
+const SAMPLE = EMBED.sample;
+let INDEX = Object.entries(SAMPLE).map(([n,d])=>({n,s:d.s,t:d.t})).sort((a,b)=>a.n.localeCompare(b.n));
+let SLUGMAP = {}; INDEX.forEach(x=>SLUGMAP[x.n]=x.s);
+const SUBCACHE = {};
+const SIDES=['a','b','c'];
+const COLORVAR={a:'red',b:'blue',c:'gold'};
+const COLORVAR2={a:'red2',b:'blue2',c:'gold2'};
+let NMODE=2, MODE_SPAN=false, TREND_ANNUAL=false, donutTab=0;
+let cur=[null,null,null];
+
+function applyTheme(t){document.documentElement.dataset.theme=t; document.getElementById('themeTxt').textContent=t==='dark'?'Light':'Dark'; try{localStorage.setItem('nce-theme',t)}catch(e){}}
+(function(){let t='dark'; try{t=localStorage.getItem('nce-theme')||'dark'}catch(e){} applyTheme(t)})();
+document.getElementById('themeBtn').onclick=()=>applyTheme(document.documentElement.dataset.theme==='dark'?'light':'dark');
+
+function setMeta(){document.getElementById('rel').textContent=META.release; document.getElementById('subcount').textContent=INDEX.length.toLocaleString();}
+setMeta();
+
+// Load the full statewide index from the data server. Falls back silently to the embedded demo.
+async function initData(){
+  if(!DATA_BASE) return;
+  try{
+    const r=await fetch(DATA_BASE+'/index.json');
+    if(!r.ok) throw new Error('index '+r.status);
+    const j=await r.json();
+    META=j.meta; YEARS=META.years; CATS=META.categories;
+    INDEX=j.suburbs.slice().sort((a,b)=>a.n.localeCompare(b.n));
+    SLUGMAP={}; INDEX.forEach(x=>SLUGMAP[x.n]=x.s);
+    setMeta();
+  }catch(e){
+    console.warn('Live data unavailable, using embedded demo:', e.message);
+  }
+}
+
+function search(q,selfIdx){
+  q=q.toLowerCase().trim();
+  const taken=[]; for(let i=0;i<NMODE;i++){if(i!==selfIdx&&cur[i])taken.push(cur[i].name);}
+  let pool=INDEX.filter(function(x){return taken.indexOf(x.n)<0});
+  if(!q)return pool.slice(0,8);
+  return pool.filter(function(x){return x.n.toLowerCase().indexOf(q)>=0}).slice(0,12);
+}
+async function loadSuburb(name){
+  if(SUBCACHE[name])return SUBCACHE[name];
+  if(SAMPLE[name]){const d={name,c:SAMPLE[name].c}; SUBCACHE[name]=d; return d;}
+  if(DATA_BASE){
+    try{
+      const sl=SLUGMAP[name]; const r=await fetch(DATA_BASE+'/suburbs/'+sl+'.json');
+      const d=await r.json(); SUBCACHE[name]=d; return d;
+    }catch(e){console.warn('Could not load',name,e.message); return null;}
+  }
+  return null;
+}
+
+function buildControls(){
+  const c=document.getElementById('controls');
+  c.className='controls n'+NMODE;
+  const labels=['Suburb A','Suburb B','Suburb C'];
+  let h='';
+  for(let i=0;i<NMODE;i++){
+    h+='<div class="picker '+SIDES[i]+'"><label>'+labels[i]+'</label><input id="in'+i+'" placeholder="Search&hellip;" autocomplete="off" value="'+(cur[i]?cur[i].name:'')+'"><button class="clearx'+(cur[i]?' show':'')+'" id="clr'+i+'" title="Clear" aria-label="Clear suburb">&times;</button><div class="results" id="res'+i+'"></div></div>';
+  }
+  c.innerHTML=h;
+  for(let i=0;i<NMODE;i++)setupPicker(i);
+}
+function setupPicker(i){
+  const inEl=document.getElementById('in'+i), resEl=document.getElementById('res'+i), clrEl=document.getElementById('clr'+i); let hl=-1, items=[];
+  function render(){items=search(inEl.value,i); resEl.innerHTML=items.map(function(x,k){return '<div data-n="'+x.n+'" class="'+(k===hl?'hl':'')+'">'+x.n+'<span class="t">'+x.t.toLocaleString()+" in '25</span></div>"}).join(''); resEl.classList.toggle('show',items.length>0);}
+  inEl.addEventListener('focus',render);
+  inEl.addEventListener('input',function(){hl=-1;render()});
+  inEl.addEventListener('keydown',function(e){if(e.key==='ArrowDown'){hl=Math.min(hl+1,items.length-1);render();e.preventDefault()}else if(e.key==='ArrowUp'){hl=Math.max(hl-1,0);render();e.preventDefault()}else if(e.key==='Enter'&&hl>=0)pick(items[hl].n);else if(e.key==='Escape')resEl.classList.remove('show')});
+  resEl.addEventListener('click',function(e){const d=e.target.closest('[data-n]'); if(d)pick(d.dataset.n)});
+  if(clrEl)clrEl.addEventListener('click',function(){cur[i]=null; inEl.value=''; clrEl.classList.remove('show'); resEl.classList.remove('show'); inEl.focus(); draw();});
+  document.addEventListener('click',function(e){if(!resEl.contains(e.target)&&e.target!==inEl)resEl.classList.remove('show')});
+  async function pick(name){inEl.value=name; resEl.classList.remove('show'); if(clrEl)clrEl.classList.add('show'); cur[i]=await loadSuburb(name); draw();}
+}
+
+document.getElementById('modeSeg').addEventListener('click',function(e){
+  const b=e.target.closest('button'); if(!b)return;
+  NMODE=+b.dataset.n;
+  [].forEach.call(document.querySelectorAll('#modeSeg button'),function(x){x.classList.toggle('on',x===b)});
+  for(let i=NMODE;i<3;i++)cur[i]=null;
+  if(donutTab>=NMODE)donutTab=0;
+  buildControls(); draw();
+});
+document.getElementById('yLatest').onclick=function(){MODE_SPAN=false;tog('yLatest','ySpan');hint();draw()};
+document.getElementById('ySpan').onclick=function(){MODE_SPAN=true;tog('ySpan','yLatest');hint();draw()};
+function tog(on,off){document.getElementById(on).classList.add('on');document.getElementById(off).classList.remove('on')}
+function hint(){document.getElementById('hint').textContent=MODE_SPAN?'2025 vs 2024 (change shown).':'Total recorded incidents for 2025.';}
+
+function catTotal(d,cat,year){if(!d||!d.c[cat])return 0; return d.c[cat].a[YEARS.indexOf(year)]||0;}
+function suburbTotal(d,year){if(!d)return 0; return CATS.reduce(function(s,c){return s+catTotal(d,c,year)},0);}
+function active(){return cur.slice(0,NMODE);}
+
+function draw(){
+  const v=document.getElementById('view');
+  const act=active();
+  if(act.every(function(x){return !x})){v.innerHTML='<div class="empty">'+(NMODE===1?'Pick a suburb to begin.':'Pick suburbs above to begin comparing.')+'</div>';document.getElementById('note').style.display='none';return}
+  document.getElementById('note').style.display='block';
+  const yr=2025,prev=2024;
+  let h='<div class="headline" style="--cols:'+NMODE+'">';
+  for(let i=0;i<NMODE;i++){const d=cur[i];h+='<div class="hcard '+SIDES[i]+'"><div class="nm">'+(d?d.name:'&mdash;')+'</div><div class="big">'+(d?suburbTotal(d,yr).toLocaleString():'&mdash;')+'</div><div class="lbl">incidents &middot; 2025</div></div>';}
+  h+='</div>';
+  for(const gname in GROUPS){
+    const gcats=GROUPS[gname];
+    const present=gcats.filter(function(c){return CATS.indexOf(c)>=0 && act.some(function(d){return catTotal(d,c,yr)||catTotal(d,c,prev)})});
+    if(!present.length)continue;
+    let maxv=1; present.forEach(function(c){for(let i=0;i<NMODE;i++)maxv=Math.max(maxv,catTotal(cur[i],c,yr))});
+    const gtot=[]; for(let i=0;i<NMODE;i++)gtot.push(present.reduce(function(s,c){return s+catTotal(cur[i],c,yr)},0));
+    h+='<div class="grp"><div class="grphead" onclick="this.parentNode.classList.toggle(\'collapsed\')"><span class="arr">&#9660;</span><span class="gname">'+gname+'</span><span class="gtot">'+gtot.map(function(t,i){return '<span style="color:var(--'+COLORVAR2[SIDES[i]]+')">'+t.toLocaleString()+'</span>'}).join(' &middot; ')+'</span></div><table><tbody>';
+    const sorted=present.map(function(c){return {c:c,tot:act.reduce(function(s,d){return s+catTotal(d,c,yr)},0)}}).sort(function(x,y){return y.tot-x.tot});
+    sorted.forEach(function(o){
+      const c=o.c;
+      h+='<tr><td class="cat">'+c+'</td>';
+      for(let i=0;i<NMODE;i++){const d=cur[i];const val=catTotal(d,c,yr);const pv=catTotal(d,c,prev);const low=val>0&&val<5;let ch='';if(MODE_SPAN&&pv)ch=' <span style="font-size:11px;color:var(--muted)">('+(val-pv>=0?'+':'')+(val-pv)+')</span>';h+='<td class="num '+SIDES[i]+'">'+val.toLocaleString()+ch+(low?'<span class="flag">low</span>':'')+'</td>';}
+      h+='<td class="barcell"><div class="barstack">';
+      for(let i=0;i<NMODE;i++){h+='<div class="bar"><i class="'+SIDES[i]+'" style="width:'+(catTotal(cur[i],c,yr)/maxv*100)+'%"></i></div>';}
+      h+='</div></td></tr>';
+    });
+    h+='</tbody></table></div>';
+  }
+  h+=trendPanel();
+  h+=donutPanel();
+  v.innerHTML=h;
+}
+
+function trendPanel(){
+  let h='<div class="panel"><div style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:10px"><div><h3>Trend over time</h3><div class="cap" id="trendcap"></div></div><div class="seg"><button id="trMonthly" class="'+(TREND_ANNUAL?'':'on')+'">Last 24 months</button><button id="trAnnual" class="'+(TREND_ANNUAL?'on':'')+'">Annual since 2010</button></div></div>';
+  h+=TREND_ANNUAL?annualSVG():monthlySVG();
+  h+='<div class="legend">'+active().map(function(d,i){return d?'<span><i class="'+SIDES[i]+'"></i>'+d.name+'</span>':''}).join('')+'</div></div>';
+  return h;
+}
+function monthlySVG(){
+  const labels=META.monthly_labels;
+  function ser(d){return d?labels.map(function(_,i){return CATS.reduce(function(s,c){return s+((d.c[c]&&d.c[c].m[i])||0)},0)}):labels.map(function(){return 0})}
+  const series=active().map(ser);
+  let max=1; series.forEach(function(s){s.forEach(function(v){max=Math.max(max,v)})});
+  const W=1000,H=240,pad=34;
+  function x(i){return pad+i*(W-2*pad)/(labels.length-1)} function y(v){return H-pad-(v/max)*(H-2*pad)}
+  function path(s){return s.map(function(v,i){return (i?'L':'M')+x(i).toFixed(1)+' '+y(v).toFixed(1)}).join(' ')}
+  const ticks=[0,6,12,18,23];
+  setTimeout(function(){const c=document.getElementById('trendcap');if(c)c.textContent='All incidents per month, '+labels[0]+' to '+labels[labels.length-1]+'.';wireTrend()},0);
+  return '<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" style="height:240px"><line x1="'+pad+'" y1="'+(H-pad)+'" x2="'+(W-pad)+'" y2="'+(H-pad)+'" stroke="var(--line)"/>'+active().map(function(d,i){return d?'<path d="'+path(series[i])+'" fill="none" stroke="var(--'+COLORVAR[SIDES[i]]+')" stroke-width="2.5"/>':''}).join('')+ticks.map(function(i){return '<text x="'+x(i)+'" y="'+(H-pad+18)+'" font-size="13" fill="var(--muted)" text-anchor="middle" font-family="Archivo">'+labels[i]+'</text>'}).join('')+'<text x="'+pad+'" y="'+(pad-10)+'" font-size="12" fill="var(--muted)" font-family="Archivo">peak '+max+'/mo</text></svg>';
+}
+function annualSVG(){
+  function ser(d){return d?YEARS.map(function(y){return suburbTotal(d,y)}):YEARS.map(function(){return 0})}
+  const series=active().map(ser);
+  let max=1; series.forEach(function(s){s.forEach(function(v){max=Math.max(max,v)})});
+  const W=1000,H=240,pad=34;
+  function x(i){return pad+i*(W-2*pad)/(YEARS.length-1)} function y(v){return H-pad-(v/max)*(H-2*pad)}
+  function path(s){return s.map(function(v,i){return (i?'L':'M')+x(i).toFixed(1)+' '+y(v).toFixed(1)}).join(' ')}
+  setTimeout(function(){const c=document.getElementById('trendcap');if(c)c.textContent='Total incidents per year, '+YEARS[0]+' to '+YEARS[YEARS.length-1]+'.';wireTrend()},0);
+  return '<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" style="height:240px"><line x1="'+pad+'" y1="'+(H-pad)+'" x2="'+(W-pad)+'" y2="'+(H-pad)+'" stroke="var(--line)"/>'+active().map(function(d,i){return d?'<path d="'+path(series[i])+'" fill="none" stroke="var(--'+COLORVAR[SIDES[i]]+')" stroke-width="2.5"/>':''}).join('')+YEARS.map(function(yy,i){return (i%3===0||i===YEARS.length-1)?'<text x="'+x(i)+'" y="'+(H-pad+18)+'" font-size="13" fill="var(--muted)" text-anchor="middle" font-family="Archivo">'+yy+'</text>':''}).join('')+'<text x="'+pad+'" y="'+(pad-10)+'" font-size="12" fill="var(--muted)" font-family="Archivo">peak '+max+'/yr</text></svg>';
+}
+function wireTrend(){const m=document.getElementById('trMonthly'),a=document.getElementById('trAnnual');if(m)m.onclick=function(){TREND_ANNUAL=false;draw()};if(a)a.onclick=function(){TREND_ANNUAL=true;draw()}}
+
+const DCOLORS=['#e8674f','#46a6ad','#e0a93f','#7a8cc4','#c77b9e','#6cae8e','#9b9b9b'];
+function donutPanel(){
+  const act=active().filter(Boolean);
+  if(!act.length)return '';
+  if(donutTab>=NMODE||!cur[donutTab]){donutTab=0; for(let i=0;i<NMODE;i++){if(cur[i]){donutTab=i;break}}}
+  const d=cur[donutTab];
+  if(!d)return '';
+  const totals=CATS.map(function(c){return {c:c,v:catTotal(d,c,2025)}}).filter(function(x){return x.v>0}).sort(function(a,b){return b.v-a.v});
+  const top=totals.slice(0,6); const other=totals.slice(6).reduce(function(s,x){return s+x.v},0);
+  const slices=top.slice(); if(other>0)slices.push({c:'Other',v:other});
+  let sum=slices.reduce(function(s,x){return s+x.v},0); if(!sum)sum=1;
+  const R=80,r=48,cx=100,cy=100; let ang=-Math.PI/2; let paths='';
+  slices.forEach(function(s,i){const a0=ang;const a1=ang+s.v/sum*2*Math.PI;ang=a1;const large=a1-a0>Math.PI?1:0;const x0=cx+R*Math.cos(a0),y0=cy+R*Math.sin(a0),x1=cx+R*Math.cos(a1),y1=cy+R*Math.sin(a1);const xi0=cx+r*Math.cos(a1),yi0=cy+r*Math.sin(a1),xi1=cx+r*Math.cos(a0),yi1=cy+r*Math.sin(a0);paths+='<path d="M'+x0+' '+y0+' A'+R+' '+R+' 0 '+large+' 1 '+x1+' '+y1+' L'+xi0+' '+yi0+' A'+r+' '+r+' 0 '+large+' 0 '+xi1+' '+yi1+' Z" fill="'+DCOLORS[i]+'"/>'});
+  let tabs='<div class="tabs">';
+  for(let i=0;i<NMODE;i++){if(cur[i])tabs+='<button class="'+(i===donutTab?'on '+SIDES[i]:'')+'" onclick="donutTab='+i+';draw()">'+cur[i].name+'</button>';}
+  tabs+='</div>';
+  let leg='<div class="dlegend">'+slices.map(function(s,i){return '<div><span class="sw" style="background:'+DCOLORS[i]+'"></span><span class="dn">'+s.c+'</span><span class="dv">'+s.v.toLocaleString()+' &middot; '+(s.v/sum*100).toFixed(0)+'%</span></div>'}).join('')+'</div>';
+  return '<div class="panel"><h3>Offence breakdown</h3><div class="cap">Share of recorded incidents by category, 2025.</div>'+tabs+'<div class="donutwrap"><svg viewBox="0 0 200 200" style="width:200px;height:200px">'+paths+'<text x="100" y="96" text-anchor="middle" font-family="Fraunces" font-size="22" font-weight="700" fill="var(--ink)">'+sum.toLocaleString()+'</text><text x="100" y="114" text-anchor="middle" font-family="Archivo" font-size="10" fill="var(--muted)" letter-spacing="1">TOTAL 2025</text></svg>'+leg+'</div></div>';
+}
+
+initData().then(function(){ buildControls(); draw(); });
+</script>
+</body>
+</html>
