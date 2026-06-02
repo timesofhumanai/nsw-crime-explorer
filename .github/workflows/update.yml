@@ -1,0 +1,38 @@
+name: Update crime data
+
+# Runs automatically once a year (mid-July, after BOCSAR's annual June release),
+# and can also be triggered manually from the Actions tab.
+on:
+  schedule:
+    - cron: '0 2 15 7 *'   # 15 July, 02:00 UTC, every year
+  workflow_dispatch:        # manual "Run workflow" button
+
+permissions:
+  contents: write           # allow the action to commit the refreshed data back
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Download and process BOCSAR data
+        run: python scripts/process.py
+
+      - name: Commit refreshed data
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/
+          if git diff --staged --quiet; then
+            echo "No data changes."
+          else
+            git commit -m "Auto-update crime data ($(date -u +%Y-%m-%d))"
+            git push
+          fi
